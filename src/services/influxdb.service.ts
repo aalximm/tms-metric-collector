@@ -17,7 +17,6 @@ export class InfluxDBService {
 
 		this.logger = logger;
 		this.logger.setContext(this.constructor.name);
-		this.logger.log('Hi')
 
 		this.client = new InfluxDB({
 			url: options.url,
@@ -28,13 +27,12 @@ export class InfluxDBService {
 	}
 
 	public async savePoints(points: Point[]): Promise<number> {
-		this.logger.log(`Trying to save Points, count: ${points.length}`, InfluxDBService.name);
-		this.logger.debug(JSON.stringify(points), InfluxDBService.name);
+		this.logger.log(`Trying to save Points, count: ${points.length}`);
+		this.logger.debug(JSON.stringify(points));
 		for (let i = 0; i < points.length; i += 500) {
 			this.writeClient.writePoints(points.slice(i, i + 500 >= points.length ? points.length : i + 500));
 			await this.writeClient
 				.flush()
-				.then(this.logger.log(`Save points successfully, started from index: ${i}`))
 				.catch(err => {
 					throw new InfluxDBError(err);
 				});
@@ -47,15 +45,15 @@ export class InfluxDBService {
 		|> range(start: -${daysAgo}d, stop: now())
 		|> filter(fn: (r) => r._measurement == "${measurmentName}") 
 		|> last()`;
-		this.logger.log(`Trying to get Points`, InfluxDBService.name);
+		this.logger.log(`Trying to get Points`);
 		const result = await this.queryClient.collectRows<{ id: number; time: Date }>(query).catch(err => {
 			throw new InfluxDBError(err);
 		});
 
-		this.logger.log(`Last test run point was recieved successfully: ${JSON.stringify(result[0])}`, InfluxDBService.name);
+		this.logger.log(`Last test run point was recieved successfully: ${JSON.stringify(result[0])}`);
 		if (result.length > 0) return { runId: result[0].id, date: new Date(result[0].time) };
 
-		this.logger.warn("Couldnt find the latest test run point time", InfluxDBService.name);
+		this.logger.warn("Couldnt find the latest test run point time");
 		return null;
 	}
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, LoggerService } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { TmsOptions } from "../interfaces/tms.interfaces";
 import { TMS_BASE_API_URL, TMS_GET_AUTHOR_EP, TMS_GET_CASE_EP, TMS_GET_PROJECT_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP, TMS_MODULE_OPTIONS } from "../constants/tms.constants";
 import axios, { AxiosError, AxiosInstance } from "axios";
@@ -24,11 +24,11 @@ export class TmsService {
 
 		this.axiosInstance.interceptors.request.use(
 			config => {
-				logger.debug(`Outgoing request:\n${JSON.stringify(config)}`, TmsService.name);
+				logger.debug(`Outgoing request:\n${JSON.stringify(config, null, 2)}`);
 				return config;
 			},
 			(err: AxiosError) => {
-				logger.error(`Request error: ${err.toJSON()}`, err.stack, TmsService.name);
+				logger.error(`Request error: ${err.toJSON()}`, err.stack);
 				return Promise.reject(new TmsException(err));
 			},
 		);
@@ -37,14 +37,13 @@ export class TmsService {
 			response => {
 				logger.debug(
 					`Incoming response: \nUrl: ${response.config.baseURL}${response.config.url}\nHeaders: ${response.headers}\nStatus: ${response.status}\nBody: ${JSON.stringify(
-						response.data,
-					)}`,
-					TmsService.name,
+						response.data, null, 2
+					)}`
 				);
 				return response;
 			},
-			(err: Error) => {
-				logger.error(`Incoming response error: ${JSON.stringify(err)}`, err.stack, TmsService.name);
+			(err: AxiosError) => {
+				logger.error(`Incoming response error: ${err.toJSON()}`, err.stack);
 				return Promise.reject(new TmsException(err));
 			},
 		);
@@ -93,27 +92,25 @@ export class TmsService {
 		return Promise.all(tasks).then<TmsRunResult[]>(taskResults => [].concat(...taskResults));
 	}
 
-	public async getRuns(code: string, options: { limit: number; offset: number }): Promise<TmsRun[]> {
+	public async getRuns(code: string, options: { limit: number; offset: number; status?: string }): Promise<TmsRun[]> {
 		const subtasks: Promise<TmsRun[]>[] = [];
 
-		let offset = options.offset;
 		const maxOffset: number = options.offset + options.limit;
 		
-		while (offset < maxOffset) {
+		for (let offset = options.offset ; offset < maxOffset; offset += BUCKET_SIZE) {
 			subtasks.push(
 				this.axiosInstance
 					.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {
 						params: {
 							limit: BUCKET_SIZE,
 							offset,
-							status: "complete",
+							status: options.status,
 						},
 					})
 					.then<TmsRun[]>(value => value.data.result.entities),
 			);
-
-			offset += BUCKET_SIZE;
 		}
+
 		return Promise.all(subtasks).then<TmsRun[]>(subtaskResults => [].concat(...subtaskResults));
 	}
 

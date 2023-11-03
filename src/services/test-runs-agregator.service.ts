@@ -21,29 +21,27 @@ export class TestRunsAgregatorService {
 	}
 
 	private async agregateRuns(code: string, options: { offset: number; limit: number }): Promise<TestRun[]> {
-		this.logger.log(
-			`Trying to get runs from projects ${code} with params:\noffset: ${options.offset}, limit: ${options.limit}`,
-			TestRunsAgregatorService.name,
-		);
+		this.logger.log(`Trying to get runs from projects ${code} with params:\noffset: ${options.offset}, limit: ${options.limit}`);
 
 		const runs: TmsRun[] = await this.tmsService.getRuns(code, {
 			limit: options.limit,
 			offset: options.offset,
+			status: "complete"
 		});
-		this.logger.log(`Runs recivied successfully, count: ${runs.length}`, TestRunsAgregatorService.name);
+		this.logger.log(`Runs recivied successfully, count: ${runs.length}`);
 
-		this.logger.log(`Trying to get results from project ${code}`, TestRunsAgregatorService.name);
+		this.logger.log(`Trying to get results from project ${code}`);
 		const results = await this.tmsService.getResultsByRuns(code, runs, BUCKET_SIZE);
-		this.logger.log(`Results recieved successfully, count: ${results.length}`, TestRunsAgregatorService.name);
+		this.logger.log(`Results recieved successfully, count: ${results.length}`);
 
 		const casesId = [...new Set(results.map(res => res.case_id))];
 
-		this.logger.log(`Trying to get cases information from projects ${code}, unique cases number: ${casesId.length}`, TestRunsAgregatorService.name);
+		this.logger.log(`Trying to get cases information from projects ${code}, unique cases number: ${casesId.length}`);
 		const cases = await this.tmsService.getCasesById(code, casesId);
-		this.logger.log(`Cases information recevied successfully`, TestRunsAgregatorService.name);
+		this.logger.log(`Cases information recevied successfully`);
 
 		const caseStepsMap: Map<number, number> = new Map();
-		cases.forEach(value => caseStepsMap.set(value.id, value.steps ? value.steps.length : null));
+		cases.forEach(value => caseStepsMap.set(value.id, value?.steps ? value.steps.length : null));
 
 		return runs.map<TestRun>(run => {
 			const sortedRunResults: TmsRunResult[] = this.getFilteredResults(results, { runId: run.id }).sort(
