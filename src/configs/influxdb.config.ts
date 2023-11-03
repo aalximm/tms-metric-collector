@@ -7,6 +7,5 @@ export const getInfluxDBConfig = (configService: ConfigService): InfluxDBOptions
 		url: configService.get<string>("INFLUXDB_URL"),
 		org: configService.get<string>("INFLUXDB_ORG"),
 		bucket: configService.get<string>("INFLUXDB_BUCKET"),
-		measurementName: configService.get<string>("INFLUXDB_MEASUREMENT_NAME"),
 	};
 };

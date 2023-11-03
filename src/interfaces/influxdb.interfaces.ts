@@ -10,5 +10,4 @@ export interface InfluxDBOptions {
 	url: string;
 	org: string;
 	bucket: string;
-	measurementName: string;
 }

@@ -1,6 +1,4 @@
 import { Module } from "@nestjs/common";
-import { AppController } from "../controllers/app.controller";
-import { AppService } from "../services/app.service";
 import { InfluxDBModule } from "./influxdb.module";
 import { TmsModule } from "./tms.module";
 import { WinstonModule } from "nest-winston";
@@ -13,6 +11,7 @@ import { TestRunAgregatorController } from "../controllers/test-run-agregator.co
 
 @Module({
 	imports: [
+		//TODO сделать конфиг в yaml формате
 		ConfigModule.forRoot({
 			envFilePath: [".env", ".env.local"],
 			isGlobal: true,
@@ -34,7 +33,7 @@ import { TestRunAgregatorController } from "../controllers/test-run-agregator.co
 		}),
 		TestRunsAgregatorModule,
 	],
-	controllers: [AppController, TestRunAgregatorController],
-	providers: [AppService],
+	controllers: [TestRunAgregatorController],
+	providers: [],
 })
 export class AppModule {}

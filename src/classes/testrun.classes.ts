@@ -1,5 +1,5 @@
 import { Point } from "@influxdata/influxdb-client";
-import { ITestCaseRun, ITestRun } from "./testrun.interfaces";
+import { ITestCaseRun, ITestRun } from "../interfaces/testrun.interfaces";
 
 export class TestRun {
 	testRunData: ITestRun;

@@ -1,21 +1,23 @@
 import { Inject, Injectable, LoggerService } from "@nestjs/common";
-import { WINSTON_MODULE_NEST_PROVIDER } from "nest-winston";
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from "nest-winston";
 import { TmsService } from "./tms.service";
 import { BUCKET_SIZE } from "src/constants/test-run-agregator.constants";
 import { TmsRun, TmsRunResult } from "src/interfaces/tms.dto";
-import { TestCaseRun, TestRun } from "src/interfaces/testrun.classes";
+import { TestCaseRun, TestRun } from "src/classes/testrun.classes";
 import { ITestRun } from "src/interfaces/testrun.interfaces";
 import { InfluxDBService } from "./influxdb.service";
 import { Point } from "@influxdata/influxdb-client";
 
 @Injectable()
 export class TestRunsAgregatorService {
-	constructor(private tmsService: TmsService, private influxDBService: InfluxDBService, @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService) {}
+	constructor(private tmsService: TmsService, private influxDBService: InfluxDBService, @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger) {
+		this.logger.setContext(this.constructor.name);
+	}
 
-	public async updateDataBase(code: string, options: {limit: number, offset: number}): Promise<number> {
+	public async updateDataBase(code: string, options: { limit: number, offset: number }): Promise<number> {
 		const testRuns: TestRun[] = await this.agregateRuns(code, {limit: options.limit, offset: options.offset});
 		const points: Point[] = testRuns.flatMap(run => run.toPoints());
-		return this.influxDBService.savePoints(points);
+		return await this.influxDBService.savePoints(points);
 	}
 
 	private async agregateRuns(code: string, options: { offset: number; limit: number }): Promise<TestRun[]> {
