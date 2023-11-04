@@ -13,8 +13,10 @@ export class TestRunsAgregatorService {
 	constructor(
 		@Inject(TMS_SERVICE_PROVIDER) private tmsService: TmsService,
 		@Inject(INFLUX_DB_SERVICE_PROVIDER) private influxDBService: InfluxDBService,
-		@Inject(LOGGER_PROVIDER) private logger: ILogger) {
+		@Inject(LOGGER_PROVIDER) private logger: ILogger,
+	) {
 		this.logger.setContext(this.constructor.name);
+		this.logger.info("Init tms-tuns-agregator service");
 	}
 
 	public async updateDataBase(code: string, options: { limit: number; offset: number }): Promise<number> {

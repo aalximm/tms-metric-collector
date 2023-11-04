@@ -6,7 +6,6 @@ import { InfluxDBModule } from "./influxdb.module";
 import { LoggerModule } from "./logger.module";
 import { TmsModule } from "./tms.module";
 import { TestRunsAgregatorModule } from "./test-runs-agregator.module";
-import { AppController } from "src/controllers/app.controller";
 
 
 @Module({
@@ -32,7 +31,7 @@ import { AppController } from "src/controllers/app.controller";
 		}),
 		TestRunsAgregatorModule,
 	],
-	controllers: [TestRunAgregatorController, AppController],
+	controllers: [TestRunAgregatorController],
 	providers: [],
 })
 export class AppModule {}

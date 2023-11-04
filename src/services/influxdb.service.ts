@@ -3,7 +3,6 @@ import { InfluxDBOptions } from "@interfaces/options/influxdb.options";
 import { InfluxDB, Point, QueryApi, WriteApi } from "@influxdata/influxdb-client";
 import { InfluxDBError } from "@exceptions";
 import { INFLUX_DB_MODULE_OPTIONS, LOGGER_PROVIDER } from "@constants/provider.tokens";
-import { Logger } from "@services";
 import { ILogger } from "@interfaces/logger.interface";
 
 @Injectable()
@@ -17,6 +16,7 @@ export class InfluxDBService {
 		this.options = options;
 
 		this.logger.setContext(this.constructor.name);
+		this.logger.info("Init influxdb client with options: " + options);
 
 		this.client = new InfluxDB({
 			url: options.url,
@@ -30,7 +30,7 @@ export class InfluxDBService {
 		this.logger.info(`Trying to save Points, count: ${points.length}`);
 		this.logger.debug(JSON.stringify(points));
 		for (let i = 0; i < points.length; i += 500) {
-			this.writeClient.writePoints(points.slice(i, i + 500 >= points.length ? points.length : i + 500));
+			this.writeClient.writePoints(points.slice(i, Math.min(i + 500, points.length)));
 			await this.writeClient.flush().catch(err => {
 				throw new InfluxDBError(err);
 			});
@@ -45,7 +45,8 @@ export class InfluxDBService {
 		|> last()`;
 		this.logger.info(`Trying to get Points`);
 		const result = await this.queryClient.collectRows<{ id: number; time: Date }>(query).catch(err => {
-			throw new InfluxDBError(err);
+			this.logger.error(err);
+			throw new InfluxDBError(err, "Ошибка при получении данных от influxDB");
 		});
 
 		this.logger.info(`Last test run point was recieved successfully: ${JSON.stringify(result[0])}`);

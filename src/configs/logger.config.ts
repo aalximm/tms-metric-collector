@@ -74,7 +74,7 @@ const nestLikeConsoleFormat = (
 			`    ${color(level.toUpperCase())} ` +
 			("undefined" !== typeof context ? `${yellow("[" + context + "]")} ` : "") +
 			`${color(message)}` +
-			(formattedMeta && formattedMeta !== "{}" ? ` - ${formattedMeta}` : "") +
+			color(formattedMeta && formattedMeta !== "{}" ? ` - ${formattedMeta}` : "") +
 			("undefined" !== typeof ms ? ` ${yellow(ms)}` : "")
 		);
 	});

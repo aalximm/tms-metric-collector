@@ -1,5 +1,4 @@
 {
-	"a-file-icon-vscode.activeIconPacks": [
-		"nest"
-	]
+	"a-file-icon-vscode.folderColor": "#939293",
+	"a-file-icon-vscode.activeIconPacks": ["nest"]
 }

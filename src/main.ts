@@ -1,21 +1,22 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "@modules";
-import { TmsService } from "@services";
+import { InfluxDBService, TestRunsAgregatorService, TmsService } from "@services";
+import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER } from "@constants/provider.tokens";
+import { ILogger } from "@interfaces/logger.interface";
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule, {
-		bufferLogs: true
+	const app = await NestFactory.createApplicationContext(AppModule, {
+		bufferLogs: true,
 	});
-	await app.listen(3001);
-	// const configService: ConfigService = app.get(ConfigService);
-	// const testRunAgregatorService: TestRunsAgregatorService = app.get(TestRunsAgregatorService);
-	// await testRunAgregatorService.updateDataBase(
-	// 	configService.get("AGREGATOR_PROJECT_CODE"),
-	// 	{
-	// 		offset: configService.get<number>("AGREGATOR_OFFSET") ?? 350,
-	// 		limit: configService.get<number>("AGREGATOR_LIMIT") ?? 200
-	// 	}
-	// );
-	// app.close();
+	const influxdbService = app.get<InfluxDBService>(INFLUX_DB_SERVICE_PROVIDER);
+	const testRunAgregatorService = app.get<TestRunsAgregatorService>(TestRunsAgregatorService);
+
+	const lastRun = await influxdbService.getLastTestRun("test run", 7);
+	console.log("last run: " + JSON.stringify(lastRun));
+
+	if (lastRun) await testRunAgregatorService.updateDataBase("UL", { offset: lastRun.runId, limit: 200 });
+	else await testRunAgregatorService.updateDataBase("UL", { offset: 350, limit: 200 });
+
+	app.close();
 }
 bootstrap();

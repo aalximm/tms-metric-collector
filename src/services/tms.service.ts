@@ -7,7 +7,6 @@ import { TmsException } from "@exceptions";
 import { BUCKET_SIZE } from "@constants/test-run-agregator.constants";
 import { getBuckets } from "@utils";
 import { LOGGER_PROVIDER, TMS_MODULE_OPTIONS } from "@constants/provider.tokens";
-import { Logger } from "@services";
 import { ILogger } from "@interfaces/logger.interface";
 
 @Injectable()
@@ -16,6 +15,7 @@ export class TmsService {
 
 	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(LOGGER_PROVIDER) private logger: ILogger) {
 		this.logger.setContext(this.constructor.name);
+		this.logger.info("Init tms client with options: " + options);
 
 		this.axiosInstance = axios.create({
 			baseURL: TMS_BASE_API_URL,
