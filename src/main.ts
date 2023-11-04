@@ -1,8 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "@modules";
-import { InfluxDBService, TestRunsAgregatorService, TmsService } from "@services";
-import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER } from "@constants/provider.tokens";
-import { ILogger } from "@interfaces/logger.interface";
+import { InfluxDBService, TestRunsAgregatorService } from "@services";
+import { INFLUX_DB_SERVICE_PROVIDER } from "@constants/provider.tokens";
 
 async function bootstrap() {
 	const app = await NestFactory.createApplicationContext(AppModule, {
