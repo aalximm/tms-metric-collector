@@ -1,15 +1,19 @@
 import { BUCKET_SIZE } from "@constants/test-run-agregator.constants";
 import { Point } from "@influxdata/influxdb-client";
 import { ITestRun } from "@interfaces/testrun.interfaces";
-import { Injectable } from "@nestjs/common";
-import { TestRun, TestCaseRun } from "src/classes/testrun.classes";
-import { TmsRun, TmsRunResult } from "src/dto/tms.dto";
-import { InfluxDBService, TmsService, Logger } from "@services";
-
+import { Inject, Injectable } from "@nestjs/common";
+import { TestRun, TestCaseRun } from "../classes/testrun.classes";
+import { TmsRun, TmsRunResult } from "../dto/tms.dto";
+import { InfluxDBService, TmsService } from "@services";
+import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER, TMS_SERVICE_PROVIDER } from "@constants/provider.tokens";
+import { ILogger } from "@interfaces/logger.interface";
 
 @Injectable()
 export class TestRunsAgregatorService {
-	constructor(private tmsService: TmsService, private influxDBService: InfluxDBService, private logger: Logger) {
+	constructor(
+		@Inject(TMS_SERVICE_PROVIDER) private tmsService: TmsService,
+		@Inject(INFLUX_DB_SERVICE_PROVIDER) private influxDBService: InfluxDBService,
+		@Inject(LOGGER_PROVIDER) private logger: ILogger) {
 		this.logger.setContext(this.constructor.name);
 	}
 
@@ -20,24 +24,24 @@ export class TestRunsAgregatorService {
 	}
 
 	private async agregateRuns(code: string, options: { offset: number; limit: number }): Promise<TestRun[]> {
-		this.logger.log(`Trying to get runs from projects ${code} with params:\noffset: ${options.offset}, limit: ${options.limit}`);
+		this.logger.info(`Trying to get runs from projects ${code} with params:\noffset: ${options.offset}, limit: ${options.limit}`);
 
 		const runs: TmsRun[] = await this.tmsService.getRuns(code, {
 			limit: options.limit,
 			offset: options.offset,
 			status: "complete",
 		});
-		this.logger.log(`Runs recivied successfully, count: ${runs.length}`);
+		this.logger.info(`Runs recivied successfully, count: ${runs.length}`);
 
-		this.logger.log(`Trying to get results from project ${code}`);
+		this.logger.info(`Trying to get results from project ${code}`);
 		const results = await this.tmsService.getResultsByRuns(code, runs, BUCKET_SIZE);
-		this.logger.log(`Results recieved successfully, count: ${results.length}`);
+		this.logger.info(`Results recieved successfully, count: ${results.length}`);
 
 		const casesId = [...new Set(results.map(res => res.case_id))];
 
-		this.logger.log(`Trying to get cases information from projects ${code}, unique cases number: ${casesId.length}`);
+		this.logger.info(`Trying to get cases information from projects ${code}, unique cases number: ${casesId.length}`);
 		const cases = await this.tmsService.getCasesById(code, casesId);
-		this.logger.log(`Cases information recevied successfully`);
+		this.logger.info(`Cases information recevied successfully`);
 
 		const caseStepsMap: Map<number, number> = new Map();
 		cases.forEach(value => caseStepsMap.set(value.id, value?.steps ? value.steps.length : null));

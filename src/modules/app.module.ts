@@ -1,8 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { InfluxDBModule, LoggerModule, TestRunsAgregatorModule, TmsModule } from "@modules";
-import { getInfluxDBConfig, getTmsConfig, getWinstonConfig } from "@configs";
+import { getInfluxDBConfig, getTmsConfig, getLoggerConfig } from "@configs";
 import { TestRunAgregatorController } from "@controllers";
+import { InfluxDBModule } from "./influxdb.module";
+import { LoggerModule } from "./logger.module";
+import { TmsModule } from "./tms.module";
+import { TestRunsAgregatorModule } from "./test-runs-agregator.module";
+import { AppController } from "src/controllers/app.controller";
 
 
 @Module({
@@ -10,6 +14,11 @@ import { TestRunAgregatorController } from "@controllers";
 		ConfigModule.forRoot({
 			envFilePath: [".env", ".env.local"],
 			isGlobal: true,
+		}),
+		LoggerModule.forRootAsync({
+			useFactory: getLoggerConfig,
+			imports: [ConfigModule],
+			inject: [ConfigService],
 		}),
 		InfluxDBModule.forRootAsync({
 			useFactory: getInfluxDBConfig,
@@ -21,14 +30,9 @@ import { TestRunAgregatorController } from "@controllers";
 			imports: [ConfigModule],
 			inject: [ConfigService],
 		}),
-		LoggerModule.forRootAsync({
-			useFactory: getWinstonConfig,
-			imports: [ConfigModule],
-			inject: [ConfigService],
-		}),
 		TestRunsAgregatorModule,
 	],
-	controllers: [TestRunAgregatorController],
+	controllers: [TestRunAgregatorController, AppController],
 	providers: [],
 })
 export class AppModule {}

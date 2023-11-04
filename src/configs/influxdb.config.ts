@@ -1,7 +1,7 @@
-import { ConfigService } from "@nestjs/config";
-import { InfluxDBOptions } from "@interfaces/influxdb.interfaces";
+import { InfluxDBOptions } from "@interfaces/options/influxdb.options";
+import { IConfig } from "@interfaces/options/module.options";
 
-export const getInfluxDBConfig = (configService: ConfigService): InfluxDBOptions => {
+export const getInfluxDBConfig: IConfig<InfluxDBOptions> = (configService) => {
 	return {
 		token: configService.get<string>("INFLUXDB_TOKEN"),
 		url: configService.get<string>("INFLUXDB_URL"),

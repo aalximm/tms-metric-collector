@@ -1,29 +1,20 @@
-import { WINSTON_MODULE_OPTIONS } from '@constants/providers';
-import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
-import { Logger } from '@services';
-import { WinstonModule, WinstonModuleAsyncOptions } from 'nest-winston';
+import { LOGGER_MODULE_OPTIONS, LOGGER_PROVIDER } from "@constants/provider.tokens";
+import { LoggerOptions } from "@interfaces/options/logger.options";
+import { IModuleAsyncOptions } from "@interfaces/options/module.options";
+import { DynamicModule, Global, Module } from "@nestjs/common";
+import { Logger } from "@services";
+import { createDynamicModule } from "@utils";
 
 @Global()
 @Module({})
-export class LoggerModule extends WinstonModule{
-	public static forRootAsync(options: WinstonModuleAsyncOptions): DynamicModule {
-		const asyncOptions = this.createAsyncOptionsProvider(options);
-		return {
-			module: LoggerModule,
-			imports: options.imports,
-			providers: [Logger, asyncOptions],
-			exports: [Logger]
-		}
-	}
-
-	private static createAsyncOptionsProvider(options: WinstonModuleAsyncOptions): Provider {
-		return {
-			provide: WINSTON_MODULE_OPTIONS,
-			useFactory: async (...args: any[]) => {
-				const config = await options.useFactory(...args);
-				return config;
-			},
-			inject: options.inject ?? [],
-		};
+export class LoggerModule {
+	static forRootAsync(options: IModuleAsyncOptions<LoggerOptions>): DynamicModule {
+		return createDynamicModule(
+			LoggerModule,
+			Logger,
+			LOGGER_PROVIDER,
+			options,
+			LOGGER_MODULE_OPTIONS
+		)
 	}
 }

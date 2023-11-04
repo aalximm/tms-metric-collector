@@ -1,30 +1,20 @@
-import { INFLUX_DB_MODULE_OPTIONS } from "@constants/providers";
-import { InfluxDBModuleAsyncOptions } from "@interfaces/influxdb.interfaces";
-import { DynamicModule, Global, Module, Provider } from "@nestjs/common";
+import { INFLUX_DB_MODULE_OPTIONS, INFLUX_DB_SERVICE_PROVIDER } from "@constants/provider.tokens";
+import { InfluxDBOptions } from "@interfaces/options/influxdb.options";
+import { IModuleAsyncOptions } from "@interfaces/options/module.options";
+import { DynamicModule, Global, Module } from "@nestjs/common";
 import { InfluxDBService } from "@services";
-
+import { createDynamicModule } from "@utils";
 
 @Global()
 @Module({})
 export class InfluxDBModule {
-	static forRootAsync(options: InfluxDBModuleAsyncOptions): DynamicModule {
-		const asyncOptions = this.createAsyncOptionsProvider(options);
-		return {
-			module: InfluxDBModule,
-			imports: options.imports,
-			providers: [InfluxDBService, asyncOptions],
-			exports: [InfluxDBService],
-		};
-	}
-
-	private static createAsyncOptionsProvider(options: InfluxDBModuleAsyncOptions): Provider {
-		return {
-			provide: INFLUX_DB_MODULE_OPTIONS,
-			useFactory: async (...args: any[]) => {
-				const config = await options.useFactory(...args);
-				return config;
-			},
-			inject: options.inject ?? [],
-		};
+	static forRootAsync(options: IModuleAsyncOptions<InfluxDBOptions>): DynamicModule {
+		return createDynamicModule(
+			InfluxDBModule,
+			InfluxDBService,
+			INFLUX_DB_SERVICE_PROVIDER,
+			options,
+			INFLUX_DB_MODULE_OPTIONS
+		)
 	}
 }

@@ -1,7 +1,7 @@
-import { ConfigService } from "@nestjs/config";
-import { TmsOptions } from "@interfaces/tms.interfaces";
+import { TmsOptions } from "@interfaces/options/tms.options";
+import { IConfig } from "@interfaces/options/module.options";
 
-export const getTmsConfig = (configService: ConfigService): TmsOptions => {
+export const getTmsConfig: IConfig<TmsOptions> = (configService) => {
 	return {
 		token: configService.get<string>("TMS_TOKEN"),
 	};

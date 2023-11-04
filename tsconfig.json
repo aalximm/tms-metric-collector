@@ -6,7 +6,7 @@
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,
 		"allowSyntheticDefaultImports": true,
-		"target": "es2017",
+		"target": "ES6",
 		"sourceMap": true,
 		"outDir": "./dist",
 		"baseUrl": "./",
@@ -18,14 +18,14 @@
 		"forceConsistentCasingInFileNames": false,
 		"noFallthroughCasesInSwitch": false,
 		"paths": {
-			"@exceptions": ["src/exceptions/index.ts"],
-			"@configs": ["src/configs/index.ts"],
+			"@exceptions": ["src/exceptions/index"],
+			"@configs": ["src/configs/index"],
 			"@constants/*": ["src/constants/*"],
-			"@controllers": ["src/controllers/index.ts"],
+			"@controllers": ["src/controllers/index"],
 			"@interfaces/*": ["src/interfaces/*"],
-			"@modules": ["src/modules/index.ts"],
-			"@services": ["src/services/index.ts"],
-			"@utils": ["src/utils/index.ts"]
+			"@modules": ["src/modules/index"],
+			"@services": ["src/services/index"],
+			"@utils": ["src/utils/index"]
 		}
 	}
 }

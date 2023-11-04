@@ -1,29 +1,14 @@
-import { DynamicModule, Global, Module, Provider } from "@nestjs/common";
+import { DynamicModule, Global, Module } from "@nestjs/common";
 import { TmsService } from "@services";
-import { TmsModuleAsyncOptions } from "@interfaces/tms.interfaces";
-import { TMS_MODULE_OPTIONS } from "@constants/providers";
+import { TMS_SERVICE_PROVIDER, TMS_MODULE_OPTIONS } from "@constants/provider.tokens";
+import { createDynamicModule } from "@utils";
+import { IModuleAsyncOptions } from "@interfaces/options/module.options";
+import { TmsOptions } from "@interfaces/options/tms.options";
 
 @Global()
 @Module({})
 export class TmsModule {
-	static forRootAsync(options: TmsModuleAsyncOptions): DynamicModule {
-		const asyncOptions = this.createAsyncOptionsProvider(options);
-		return {
-			module: TmsModule,
-			imports: options.imports,
-			providers: [TmsService, asyncOptions],
-			exports: [TmsService],
-		};
-	}
-
-	private static createAsyncOptionsProvider(options: TmsModuleAsyncOptions): Provider {
-		return {
-			provide: TMS_MODULE_OPTIONS,
-			useFactory: async (...args: any[]) => {
-				const config = await options.useFactory(...args);
-				return config;
-			},
-			inject: options.inject ?? [],
-		};
+	static forRootAsync(options: IModuleAsyncOptions<TmsOptions>): DynamicModule {
+		return createDynamicModule(TmsModule, TmsService, TMS_SERVICE_PROVIDER, options, TMS_MODULE_OPTIONS);
 	}
 }
