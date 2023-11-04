@@ -1,5 +1,5 @@
 import { Point } from "@influxdata/influxdb-client";
-import { ITestCaseRun, ITestRun } from "../interfaces/testrun.interfaces";
+import { ITestCaseRun, ITestRun } from "@interfaces/testrun.interfaces";
 
 export class TestRun {
 	testRunData: ITestRun;
@@ -14,10 +14,10 @@ export class TestRun {
 			.timestamp(this.testRunData.startTime)
 			.intField("userId", this.testRunData.userId)
 			.intField("id", this.testRunData.id)
-			.intField("steps number", this.testRunData?.stepsNumber || 0)
+			.intField("steps number", this.testRunData?.stepsNumber ?? 0)
 			.intField("duration", this.testRunData.endTime.getTime() - this.testRunData.startTime.getTime())
-			.stringField("description", this.testRunData?.description || "empty")
-			.stringField("title", this.testRunData?.title || "empty");
+			.stringField("description", this.testRunData?.description ?? "empty")
+			.stringField("title", this.testRunData?.title ?? "empty");
 
 		if (this.testRunData.enviroment) {
 			runStartPoint.tag("enviroment", this.testRunData.enviroment);
@@ -40,7 +40,7 @@ export class TestCaseRun {
 				.timestamp(this.caseData.startTime)
 				.intField("id", this.caseData.id)
 				.intField("runId", this.caseData.runId)
-				.intField("steps number", this.caseData?.stepsNumber || 0)
+				.intField("steps number", this.caseData?.stepsNumber ?? 0)
 				.stringField("status", this.caseData.status)
 				.intField("duration", this.caseData.endTime.getTime() - this.caseData.startTime.getTime());
 	}

@@ -1,7 +1,7 @@
 import { DynamicModule, Global, Module, Provider } from "@nestjs/common";
-import { TmsService } from "../services/tms.service";
-import { TmsModuleAsyncOptions } from "../interfaces/tms.interfaces";
-import { TMS_MODULE_OPTIONS } from "../constants/tms.constants";
+import { TmsService } from "@services";
+import { TmsModuleAsyncOptions } from "@interfaces/tms.interfaces";
+import { TMS_MODULE_OPTIONS } from "@constants/providers";
 
 @Global()
 @Module({})
@@ -23,7 +23,7 @@ export class TmsModule {
 				const config = await options.useFactory(...args);
 				return config;
 			},
-			inject: options.inject || [],
+			inject: options.inject ?? [],
 		};
 	}
 }

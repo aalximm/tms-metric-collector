@@ -1,9 +1,9 @@
-import { Inject, Injectable, LoggerService } from "@nestjs/common";
-import { InfluxDBOptions } from "../interfaces/influxdb.interfaces";
+import { Inject, Injectable } from "@nestjs/common";
+import { InfluxDBOptions } from "@interfaces/influxdb.interfaces";
 import { InfluxDB, Point, QueryApi, WriteApi } from "@influxdata/influxdb-client";
-import { INFLUX_DB_MODULE_OPTIONS } from "../constants/influxdb.constants";
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from "nest-winston";
-import { InfluxDBError } from "src/exceptions/influxdb.exception";
+import { InfluxDBError } from "@exceptions";
+import { INFLUX_DB_MODULE_OPTIONS } from "@constants/providers";
+import { Logger } from "@services";
 
 @Injectable()
 export class InfluxDBService {
@@ -12,7 +12,7 @@ export class InfluxDBService {
 	private writeClient: WriteApi;
 	private queryClient: QueryApi;
 
-	constructor(@Inject(INFLUX_DB_MODULE_OPTIONS) options: InfluxDBOptions, @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger) {
+	constructor(@Inject(INFLUX_DB_MODULE_OPTIONS) options: InfluxDBOptions, private logger: Logger) {
 		this.options = options;
 
 		this.logger = logger;

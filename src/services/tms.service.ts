@@ -1,12 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { TmsOptions } from "../interfaces/tms.interfaces";
-import { TMS_BASE_API_URL, TMS_GET_AUTHOR_EP, TMS_GET_CASE_EP, TMS_GET_PROJECT_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP, TMS_MODULE_OPTIONS } from "../constants/tms.constants";
+import { TMS_BASE_API_URL, TMS_GET_AUTHOR_EP, TMS_GET_CASE_EP, TMS_GET_PROJECT_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP } from "../constants/tms.endpoints";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { TmsProject, TmsApiResponse, TmsAuthor, TmsList, TmsRun, TmsRunResult, TmsCase } from "../interfaces/tms.dto";
-import { TmsException } from "src/exceptions/tms.exception";
+import { TmsProject, TmsApiResponse, TmsAuthor, TmsList, TmsRun, TmsRunResult, TmsCase } from "../dto/tms.dto";
+import { TmsException } from "@exceptions";
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from "nest-winston";
-import { BUCKET_SIZE } from "src/constants/test-run-agregator.constants";
-import { getBuckets } from "src/utils/buckets.util";
+import { BUCKET_SIZE } from "@constants/test-run-agregator.constants";
+import { getBuckets } from "@utils";
+import { TMS_MODULE_OPTIONS } from "@constants/providers";
 
 @Injectable()
 export class TmsService {
@@ -14,7 +15,7 @@ export class TmsService {
 
 	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger) {
 		this.logger.setContext(this.constructor.name);
-		
+
 		this.axiosInstance = axios.create({
 			baseURL: TMS_BASE_API_URL,
 			headers: {
@@ -37,8 +38,10 @@ export class TmsService {
 			response => {
 				logger.debug(
 					`Incoming response: \nUrl: ${response.config.baseURL}${response.config.url}\nHeaders: ${response.headers}\nStatus: ${response.status}\nBody: ${JSON.stringify(
-						response.data, null, 2
-					)}`
+						response.data,
+						null,
+						2,
+					)}`,
 				);
 				return response;
 			},
@@ -96,8 +99,8 @@ export class TmsService {
 		const subtasks: Promise<TmsRun[]>[] = [];
 
 		const maxOffset: number = options.offset + options.limit;
-		
-		for (let offset = options.offset ; offset < maxOffset; offset += BUCKET_SIZE) {
+
+		for (let offset = options.offset; offset < maxOffset; offset += BUCKET_SIZE) {
 			subtasks.push(
 				this.axiosInstance
 					.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {

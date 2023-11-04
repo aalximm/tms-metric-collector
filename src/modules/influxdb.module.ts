@@ -1,7 +1,8 @@
+import { INFLUX_DB_MODULE_OPTIONS } from "@constants/providers";
+import { InfluxDBModuleAsyncOptions } from "@interfaces/influxdb.interfaces";
 import { DynamicModule, Global, Module, Provider } from "@nestjs/common";
-import { InfluxDBService } from "../services/influxdb.service";
-import { InfluxDBModuleAsyncOptions } from "../interfaces/influxdb.interfaces";
-import { INFLUX_DB_MODULE_OPTIONS } from "../constants/influxdb.constants";
+import { InfluxDBService } from "@services";
+
 
 @Global()
 @Module({})
@@ -23,7 +24,7 @@ export class InfluxDBModule {
 				const config = await options.useFactory(...args);
 				return config;
 			},
-			inject: options.inject || [],
+			inject: options.inject ?? [],
 		};
 	}
 }

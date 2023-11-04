@@ -1,5 +1,5 @@
 import { ConfigService } from "@nestjs/config";
-import { TmsOptions } from "src/interfaces/tms.interfaces";
+import { TmsOptions } from "@interfaces";
 
 export const getTmsConfig = (configService: ConfigService): TmsOptions => {
 	return {

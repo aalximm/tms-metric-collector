@@ -1,21 +1,20 @@
-import { Inject, Injectable, LoggerService } from "@nestjs/common";
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from "nest-winston";
-import { TmsService } from "./tms.service";
-import { BUCKET_SIZE } from "src/constants/test-run-agregator.constants";
-import { TmsRun, TmsRunResult } from "src/interfaces/tms.dto";
-import { TestCaseRun, TestRun } from "src/classes/testrun.classes";
-import { ITestRun } from "src/interfaces/testrun.interfaces";
-import { InfluxDBService } from "./influxdb.service";
+import { BUCKET_SIZE } from "@constants/test-run-agregator.constants";
 import { Point } from "@influxdata/influxdb-client";
+import { ITestRun } from "@interfaces/testrun.interfaces";
+import { Injectable } from "@nestjs/common";
+import { TestRun, TestCaseRun } from "src/classes/testrun.classes";
+import { TmsRun, TmsRunResult } from "src/dto/tms.dto";
+import { InfluxDBService, TmsService, Logger } from "@services";
+
 
 @Injectable()
 export class TestRunsAgregatorService {
-	constructor(private tmsService: TmsService, private influxDBService: InfluxDBService, @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger) {
+	constructor(private tmsService: TmsService, private influxDBService: InfluxDBService, private logger: Logger) {
 		this.logger.setContext(this.constructor.name);
 	}
 
-	public async updateDataBase(code: string, options: { limit: number, offset: number }): Promise<number> {
-		const testRuns: TestRun[] = await this.agregateRuns(code, {limit: options.limit, offset: options.offset});
+	public async updateDataBase(code: string, options: { limit: number; offset: number }): Promise<number> {
+		const testRuns: TestRun[] = await this.agregateRuns(code, { limit: options.limit, offset: options.offset });
 		const points: Point[] = testRuns.flatMap(run => run.toPoints());
 		return await this.influxDBService.savePoints(points);
 	}
@@ -26,7 +25,7 @@ export class TestRunsAgregatorService {
 		const runs: TmsRun[] = await this.tmsService.getRuns(code, {
 			limit: options.limit,
 			offset: options.offset,
-			status: "complete"
+			status: "complete",
 		});
 		this.logger.log(`Runs recivied successfully, count: ${runs.length}`);
 
@@ -53,13 +52,13 @@ export class TestRunsAgregatorService {
 					endTime: new Date(value.end_time),
 					id: value.case_id,
 					runId: run.id,
-					stepsNumber: caseStepsMap.get(value.case_id) || 0,
-					status: value.status
+					stepsNumber: caseStepsMap.get(value.case_id) ?? 0,
+					status: value.status,
 				});
 			}, this);
 
 			let stepsNumber = 0;
-			for (let i = 0; i < runCases.length; i++){
+			for (let i = 0; i < runCases.length; i++) {
 				stepsNumber += runCases[i].caseData.stepsNumber;
 			}
 

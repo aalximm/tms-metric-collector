@@ -1,17 +1,12 @@
 import { Module } from "@nestjs/common";
-import { InfluxDBModule } from "./influxdb.module";
-import { TmsModule } from "./tms.module";
-import { WinstonModule } from "nest-winston";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { getWinstonConfig } from "../configs/winston.config";
-import { getTmsConfig } from "../configs/tms.config";
-import { getInfluxDBConfig } from "../configs/influxdb.config";
-import { TestRunsAgregatorModule } from "./test-runs-agregator.module";
-import { TestRunAgregatorController } from "../controllers/test-run-agregator.controller";
+import { InfluxDBModule, LoggerModule, TestRunsAgregatorModule, TmsModule } from "@modules";
+import { getInfluxDBConfig, getTmsConfig, getWinstonConfig } from "@configs";
+import { TestRunAgregatorController } from "@controllers";
+
 
 @Module({
 	imports: [
-		//TODO сделать конфиг в yaml формате
 		ConfigModule.forRoot({
 			envFilePath: [".env", ".env.local"],
 			isGlobal: true,
@@ -26,7 +21,7 @@ import { TestRunAgregatorController } from "../controllers/test-run-agregator.co
 			imports: [ConfigModule],
 			inject: [ConfigService],
 		}),
-		WinstonModule.forRootAsync({
+		LoggerModule.forRootAsync({
 			useFactory: getWinstonConfig,
 			imports: [ConfigModule],
 			inject: [ConfigService],

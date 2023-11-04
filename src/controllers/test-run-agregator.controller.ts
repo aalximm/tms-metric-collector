@@ -1,5 +1,5 @@
 import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
-import { TestRunsAgregatorService } from 'src/services/test-runs-agregator.service';
+import { TestRunsAgregatorService } from '@services';
 
 @Controller('test-run-agregator')
 export class TestRunAgregatorController {

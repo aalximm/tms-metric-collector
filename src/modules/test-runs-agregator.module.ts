@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { TestRunsAgregatorService } from "../services/test-runs-agregator.service";
+import { TestRunsAgregatorService } from "@services";
 
 @Module({
 	providers: [TestRunsAgregatorService],
