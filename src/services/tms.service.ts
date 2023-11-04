@@ -1,19 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { TmsOptions } from "../interfaces/tms.interfaces";
-import { TMS_BASE_API_URL, TMS_GET_AUTHOR_EP, TMS_GET_CASE_EP, TMS_GET_PROJECT_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP } from "../constants/tms.endpoints";
+import { TmsOptions } from "@interfaces/tms.interfaces";
+import { TMS_BASE_API_URL, TMS_GET_AUTHOR_EP, TMS_GET_CASE_EP, TMS_GET_PROJECT_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP } from "@constants/tms.endpoints";
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { TmsProject, TmsApiResponse, TmsAuthor, TmsList, TmsRun, TmsRunResult, TmsCase } from "../dto/tms.dto";
 import { TmsException } from "@exceptions";
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from "nest-winston";
 import { BUCKET_SIZE } from "@constants/test-run-agregator.constants";
 import { getBuckets } from "@utils";
 import { TMS_MODULE_OPTIONS } from "@constants/providers";
+import { Logger } from "@services";
 
 @Injectable()
 export class TmsService {
 	private axiosInstance: AxiosInstance;
 
-	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger) {
+	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, private logger: Logger) {
 		this.logger.setContext(this.constructor.name);
 
 		this.axiosInstance = axios.create({
