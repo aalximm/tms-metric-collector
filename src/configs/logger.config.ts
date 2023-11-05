@@ -6,7 +6,7 @@ import { format } from "winston";
 import { inspect } from "util";
 import safeStringify from "fast-safe-stringify";
 
-export const getLoggerConfig: IConfig<LoggerOptions> = configService => {
+export const getLoggerConfig: IConfig<LoggerOptions> = () => {
 	return {
 		transports: [
 			new winston.transports.Console({
