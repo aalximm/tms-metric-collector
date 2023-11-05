@@ -15,7 +15,7 @@ export class TmsService {
 
 	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(LOGGER_PROVIDER) private logger: ILogger) {
 		this.logger.setContext(this.constructor.name);
-		this.logger.info("Init tms client with options: " + options);
+		this.logger.info("Init tms client with options: " + JSON.stringify(options));
 
 		this.axiosInstance = axios.create({
 			baseURL: TMS_BASE_API_URL,

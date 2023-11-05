@@ -10,6 +10,8 @@ async function bootstrap() {
 	const influxdbService = app.get<InfluxDBService>(INFLUX_DB_SERVICE_PROVIDER);
 	const testRunAgregatorService = app.get<TestRunsAgregatorService>(TestRunsAgregatorService);
 
+	await influxdbService.tryToConnect(20);
+	// await influxdbService.setUp();
 	const lastRun = await influxdbService.getLastTestRun("test run", 7);
 	console.log("last run: " + JSON.stringify(lastRun));
 

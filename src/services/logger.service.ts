@@ -11,7 +11,6 @@ export class Logger implements ILogger {
 
 	constructor(@Inject(LOGGER_MODULE_OPTIONS) options: LoggerOptions) {
 		this.logger = createLogger(options);
-		this.logger.log("Init logger", "Logger");
 	}
 
 	setContext(context: string) {
