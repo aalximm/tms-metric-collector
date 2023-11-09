@@ -1,5 +1,6 @@
 export interface ILogger {
 	setContext(context: string): void;
+	initService(serviceName: string, options?: any): void;
 	info(message: any, context?: string): any;
 	error(message: any, trace?: string, context?: string): any;
 	warn(message: any, context?: string): any;

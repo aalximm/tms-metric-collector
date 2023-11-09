@@ -17,6 +17,12 @@ export class Logger implements ILogger {
 		this.context = context;
 	}
 
+	initService(serviceName: string, options?: any) {
+		this.setContext(serviceName);
+		if (options) this.info(`Init service ${serviceName} with params:\n${JSON.stringify(options)}`);
+		else this.info(`Init service ${serviceName} without params`);
+	}
+
 	public info(message: any, context?: string): any {
 		context = context || this.context;
 
@@ -35,8 +41,6 @@ export class Logger implements ILogger {
 		if (message instanceof Error) {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { message: msg, name, stack, ...meta } = message;
-
-			this.info(JSON.stringify(context));
 
 			return this.logger.error(msg, { context, stack: [trace || message.stack], error: message, ...meta });
 		}

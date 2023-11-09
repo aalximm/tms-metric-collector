@@ -1,0 +1,21 @@
+tms:
+    base_url: "https://api.qase.io/v1/"
+    bucket_size: 100
+    tracked_runs_status: "complete"
+
+agregator:
+    track_duration_of_empty_cases: false
+
+influxdb:
+    save_points_bucket_size: 500
+    schema:
+        test_run:
+            measurment_name: "test run"
+            steps_number: "steps number"
+            duration: "duration"
+            is_automation: "is automation run"
+        test_case:
+            measurment_name: "test case"
+            steps_number: "steps number"
+            duration: "duration"
+            is_automation: "is automation run"

@@ -1,17 +1,16 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "@modules";
 import { InfluxDBService, TestRunsAgregatorService } from "@services";
-import { INFLUX_DB_SERVICE_PROVIDER } from "@constants/provider.tokens";
+import { INFLUX_DB_SERVICE_PROVIDER, TEST_RUNS_AGREGATOR_SERVICE_PROVIDER } from "@constants/provider.tokens";
 
 async function bootstrap() {
 	const app = await NestFactory.createApplicationContext(AppModule, {
 		bufferLogs: true,
 	});
 	const influxdbService = app.get<InfluxDBService>(INFLUX_DB_SERVICE_PROVIDER);
-	const testRunAgregatorService = app.get<TestRunsAgregatorService>(TestRunsAgregatorService);
+	const testRunAgregatorService = app.get<TestRunsAgregatorService>(TEST_RUNS_AGREGATOR_SERVICE_PROVIDER);
 
 	await influxdbService.tryToConnect(20);
-	// await influxdbService.setUp();
 	const lastRun = await influxdbService.getLastTestRun("test run", 7);
 	console.log("last run: " + JSON.stringify(lastRun));
 

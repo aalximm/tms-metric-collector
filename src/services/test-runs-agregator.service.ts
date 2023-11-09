@@ -1,27 +1,30 @@
-import { BUCKET_SIZE } from "@constants/test-run-agregator.constants";
 import { Point } from "@influxdata/influxdb-client";
 import { ITestRun } from "@interfaces/testrun.interfaces";
 import { Inject, Injectable } from "@nestjs/common";
-import { TestRun, TestCaseRun } from "../classes/testrun.classes";
+import { TestRun, TestCaseRun } from "../classes/testrun.class";
 import { TmsRun, TmsRunResult } from "../dto/tms.dto";
 import { InfluxDBService, TmsService } from "@services";
-import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER, TMS_SERVICE_PROVIDER } from "@constants/provider.tokens";
+import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER, TEST_RUNS_AGREGATOR_MODULE_OPTIONS, TMS_SERVICE_PROVIDER } from "@constants/provider.tokens";
 import { ILogger } from "@interfaces/logger.interface";
+import { TestRunsAgregatorOptions } from "@interfaces/options/test-runs-agregator.options";
 
 @Injectable()
 export class TestRunsAgregatorService {
+	private trackTimeOfEmptyCases: boolean;
 	constructor(
+		@Inject(TEST_RUNS_AGREGATOR_MODULE_OPTIONS) options: TestRunsAgregatorOptions,
 		@Inject(TMS_SERVICE_PROVIDER) private tmsService: TmsService,
 		@Inject(INFLUX_DB_SERVICE_PROVIDER) private influxDBService: InfluxDBService,
 		@Inject(LOGGER_PROVIDER) private logger: ILogger,
 	) {
-		this.logger.setContext(this.constructor.name);
-		this.logger.info("Init tms-tuns-agregator service");
+		this.trackTimeOfEmptyCases = options.trackEmptyCases;
+		this.logger.initService(this.constructor.name, options);
 	}
 
 	public async updateDataBase(code: string, options: { limit: number; offset: number }): Promise<number> {
 		const testRuns: TestRun[] = await this.agregateRuns(code, { limit: options.limit, offset: options.offset });
-		const points: Point[] = testRuns.flatMap(run => run.toPoints());
+		const influxDBSchema = this.influxDBService.getSchema();
+		const points: Point[] = testRuns.flatMap(run => run.toPoints(influxDBSchema, this.trackTimeOfEmptyCases));
 		return await this.influxDBService.savePoints(points);
 	}
 
@@ -31,12 +34,11 @@ export class TestRunsAgregatorService {
 		const runs: TmsRun[] = await this.tmsService.getRuns(code, {
 			limit: options.limit,
 			offset: options.offset,
-			status: "complete",
 		});
 		this.logger.info(`Runs recivied successfully, count: ${runs.length}`);
 
 		this.logger.info(`Trying to get results from project ${code}`);
-		const results = await this.tmsService.getResultsByRuns(code, runs, BUCKET_SIZE);
+		const results = await this.tmsService.getResultsByRuns(code, runs);
 		this.logger.info(`Results recieved successfully, count: ${results.length}`);
 
 		const casesId = [...new Set(results.map(res => res.case_id))];
@@ -46,19 +48,19 @@ export class TestRunsAgregatorService {
 		this.logger.info(`Cases information recevied successfully`);
 
 		const caseStepsMap: Map<number, number> = new Map();
-		cases.forEach(value => caseStepsMap.set(value.id, value?.steps ? value.steps.length : null));
+		cases.forEach(value => caseStepsMap.set(value.id, value?.steps ? value.steps.length : 0));
 
 		return runs.map<TestRun>(run => {
-			const sortedRunResults: TmsRunResult[] = this.getFilteredResults(results, { runId: run.id }).sort(
-				(a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime(),
-			);
+			const sortedRunResults: TmsRunResult[] = this.getFilteredResults(results, { runId: run.id })
+				.sort(this.sortByEndTimeComparator);
+			
 			const runCases: TestCaseRun[] = sortedRunResults.map((value, index, array) => {
 				return new TestCaseRun({
 					startTime: index == 0 ? new Date(run.start_time) : new Date(array[index - 1].end_time),
 					endTime: new Date(value.end_time),
 					id: value.case_id,
 					runId: run.id,
-					stepsNumber: caseStepsMap.get(value.case_id) ?? 0,
+					stepsNumber: caseStepsMap.get(value.case_id),
 					status: value.status,
 				});
 			}, this);
@@ -71,6 +73,7 @@ export class TestRunsAgregatorService {
 			const runData: ITestRun = {
 				startTime: new Date(run.start_time),
 				endTime: new Date(run.end_time),
+				isAuto: this.checkAutomation(run),
 				id: run.id,
 				stepsNumber: stepsNumber,
 				title: run.title,
@@ -91,4 +94,14 @@ export class TestRunsAgregatorService {
 		};
 		return results.filter(value => checkCaseId(value.case_id) && checkRunId(value.run_id));
 	}
+
+	private sortByEndTimeComparator = (a: TmsRunResult, b: TmsRunResult) => {
+		return new Date(a.end_time).getTime() - new Date(b.end_time).getTime();
+	}
+
+	private checkAutomation(run: TmsRun): boolean {
+		return this.automationRunDescriptionRegExp.test(run.description);
+	}
+
+	private automationRunDescriptionRegExp = /Playwright/;
 }

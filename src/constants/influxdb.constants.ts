@@ -1,1 +1,0 @@
-export const INFLUX_DB_DEFAULT_PREVIOUS_DAYS = 7;

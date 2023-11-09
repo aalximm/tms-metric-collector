@@ -1,4 +1,3 @@
-export const TMS_BASE_API_URL = "https://api.qase.io/v1/";
 export const TMS_GET_AUTHOR_EP = "author";
 export const TMS_GET_PROJECT_EP = (code: string) => `project/${code}`;
 export const TMS_GET_RESULTS_EP = (code: string) => `result/${code}`;

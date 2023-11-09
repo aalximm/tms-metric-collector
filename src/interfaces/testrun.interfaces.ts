@@ -12,6 +12,7 @@ export interface ITestRun {
 	endTime: Date;
 	id: number;
 	stepsNumber: number;
+	isAuto: boolean;
 	userId?: number;
 	enviroment?: string;
 	title?: string;

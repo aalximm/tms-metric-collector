@@ -19,7 +19,8 @@
 		"noFallthroughCasesInSwitch": false,
 		"paths": {
 			"@exceptions": ["src/exceptions/index"],
-			"@configs": ["src/configs/index"],
+			"@config-factory": ["src/config/factory/index"],
+			"@config/*": ["src/config/*"],
 			"@constants/*": ["src/constants/*"],
 			"@controllers": ["src/controllers/index"],
 			"@interfaces/*": ["src/interfaces/*"],
