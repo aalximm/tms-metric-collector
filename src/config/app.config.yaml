@@ -14,6 +14,7 @@ influxdb:
             steps_number: "steps number"
             duration: "duration"
             is_automation: "is automation run"
+            run_id: "run id"
         test_case:
             measurment_name: "test case"
             steps_number: "steps number"

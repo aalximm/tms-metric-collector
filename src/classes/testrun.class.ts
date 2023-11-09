@@ -23,7 +23,6 @@ export class TestRun {
 
 		const runPoint = new SafePoint(runSchema.measurment_name)
 			.timestamp(this.testRunData.startTime)
-			.intField(runSchema.id, this.testRunData.id)
 			.intField(runSchema.steps_number, this.testRunData?.stepsNumber ?? 0)
 			.intField(runSchema.duration, duration)
 			.booleanField(runSchema.is_automation, this.testRunData.isAuto)

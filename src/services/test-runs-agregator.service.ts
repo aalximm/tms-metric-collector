@@ -2,8 +2,8 @@ import { Point } from "@influxdata/influxdb-client";
 import { ITestRun } from "@interfaces/testrun.interfaces";
 import { Inject, Injectable } from "@nestjs/common";
 import { TestRun, TestCaseRun } from "../classes/testrun.class";
-import { TmsRun, TmsRunResult } from "../dto/tms.dto";
-import { InfluxDBService, TmsService } from "@services";
+import { TmsCase, TmsRun, TmsRunResult } from "../dto/tms.dto";
+import { InfluxDBService, Logger, TmsService } from "@services";
 import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER, TEST_RUNS_AGREGATOR_MODULE_OPTIONS, TMS_SERVICE_PROVIDER } from "@constants/provider.tokens";
 import { ILogger } from "@interfaces/logger.interface";
 import { TestRunsAgregatorOptions } from "@interfaces/options/test-runs-agregator.options";
@@ -45,10 +45,10 @@ export class TestRunsAgregatorService {
 
 		this.logger.info(`Trying to get cases information from projects ${code}, unique cases number: ${casesId.length}`);
 		const cases = await this.tmsService.getCasesById(code, casesId);
-		this.logger.info(`Cases information recevied successfully`);
+		this.logger.info(`Cases information recevied successfully, length: ${cases.length}`);
 
-		const caseStepsMap: Map<number, number> = new Map();
-		cases.forEach(value => caseStepsMap.set(value.id, value?.steps ? value.steps.length : 0));
+		const caseStepsMap = {};
+		cases.forEach(value => caseStepsMap[value.id] = value.steps?.length ?? 0);
 
 		return runs.map<TestRun>(run => {
 			const sortedRunResults: TmsRunResult[] = this.getFilteredResults(results, { runId: run.id })
@@ -60,7 +60,7 @@ export class TestRunsAgregatorService {
 					endTime: new Date(value.end_time),
 					id: value.case_id,
 					runId: run.id,
-					stepsNumber: caseStepsMap.get(value.case_id),
+					stepsNumber: caseStepsMap[value.case_id] ?? 0,
 					status: value.status,
 				});
 			}, this);
@@ -81,7 +81,8 @@ export class TestRunsAgregatorService {
 				userId: run.user_id,
 				enviroment: run?.environment?.title,
 			};
-			return new TestRun(runData, runCases);
+			const testRun = new TestRun(runData, runCases);
+			return testRun;
 		}, this);
 	}
 

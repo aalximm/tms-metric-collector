@@ -31,7 +31,7 @@ export class TmsService {
 				return config;
 			},
 			(err: AxiosError) => {
-				logger.error(`Request error: ${err.toJSON()}`, err.stack);
+				logger.error(`Request error: ${JSON.stringify(err.toJSON())}`, err.stack);
 				return Promise.reject(new TmsException(err));
 			},
 		);
@@ -48,7 +48,7 @@ export class TmsService {
 				return response;
 			},
 			(err: AxiosError) => {
-				logger.error(`Incoming response error: ${err.toJSON()}`, err.stack);
+				logger.error(`Incoming response error: ${JSON.stringify(err.toJSON())}`, err.stack);
 				return Promise.reject(new TmsException(err));
 			},
 		);

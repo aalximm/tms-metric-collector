@@ -9,6 +9,6 @@ export const getInfluxDBConfig: IConfig<InfluxDBOptions> = (configService) => {
 		org: configService.get<string>("INFLUXDB_ORG"),
 		bucket: configService.get<string>("INFLUXDB_BUCKET"),
 		bucketSizeOnFlush: configService.get<number>("influxdb.save_points_bucket_size"),
-		schema: configService.get<InfluxDBSchema>("influxdb.shema")
+		schema: configService.get<InfluxDBSchema>("influxdb.schema")
 	};
 };
