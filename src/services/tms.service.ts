@@ -99,26 +99,29 @@ export class TmsService {
 		return Promise.all(tasks).then<TmsRunResult[]>(taskResults => [].concat(...taskResults));
 	}
 
-	public async getRuns(code: string, options: { limit: number; offset: number; }): Promise<TmsRun[]> {
-		const subtasks: Promise<TmsRun[]>[] = [];
+	private async getRuns(code: string, options: { limit: number; offset: number; status: string }): Promise<TmsRun[]> {
+		const response = await this.axiosInstance
+			.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {
+				params: {
+					limit: options.limit,
+					offset: options.offset,
+					status: options.status,
+				},
+			});
+		return response.data.result.entities;
+	}
 
-		const maxOffset: number = options.offset + options.limit;
+	public async getAllRuns(code): Promise<TmsRun[]> {
+		const runs = [];
+		let response = null;
+		let offset = 0;
+		do {
+			response = await this.getRuns(code, { offset, limit: this.bucketSize, status: this.trackedRunStatus })
+			runs.push(...response);
+			offset += this.bucketSize;
+		} while (response?.length != 0)
 
-		for (let offset = options.offset; offset < maxOffset; offset += this.bucketSize) {
-			subtasks.push(
-				this.axiosInstance
-					.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {
-						params: {
-							limit: this.bucketSize,
-							offset,
-							status: this.trackedRunStatus,
-						},
-					})
-					.then<TmsRun[]>(value => value.data.result.entities),
-			);
-		}
-
-		return Promise.all(subtasks).then<TmsRun[]>(subtaskResults => [].concat(...subtaskResults));
+		return runs;
 	}
 
 	public async getCases(code: string, filterOptions?: { limit?: number; offset?: number }): Promise<TmsCase[]> {

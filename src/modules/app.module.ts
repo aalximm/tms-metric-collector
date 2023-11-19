@@ -20,8 +20,7 @@ import { getTestRunsAgregatorConfig } from "@config/factory/test-runs-agregator.
 				INFLUXDB_ORG: Joi.string().required(),
 				INFLUXDB_BUCKET: Joi.string().required(),
 				TMS_TOKEN: Joi.string().required(),
-				AGREGATOR_INITIAL_OFFSET: Joi.number().default(350),
-				AGREGATOR_LIMIT: Joi.number().default(200)
+				TEST_AGREGATOR_PROJECT_CODE: Joi.string().required()
 			}),
 			isGlobal: true,
 		}),

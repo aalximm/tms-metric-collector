@@ -21,20 +21,17 @@ export class TestRunsAgregatorService {
 		this.logger.initService(this.constructor.name, options);
 	}
 
-	public async updateDataBase(code: string, options: { limit: number; offset: number }): Promise<number> {
-		const testRuns: TestRun[] = await this.agregateRuns(code, { limit: options.limit, offset: options.offset });
+	public async updateDataBase(code: string): Promise<number> {
+		const testRuns: TestRun[] = await this.agregateAllRuns(code);
 		const influxDBSchema = this.influxDBService.getSchema();
 		const points: Point[] = testRuns.flatMap(run => run.toPoints(influxDBSchema, this.trackTimeOfEmptyCases));
 		return await this.influxDBService.savePoints(points);
 	}
 
-	private async agregateRuns(code: string, options: { offset: number; limit: number }): Promise<TestRun[]> {
-		this.logger.info(`Trying to get runs from projects ${code} with params:\noffset: ${options.offset}, limit: ${options.limit}`);
+	private async agregateAllRuns(code: string): Promise<TestRun[]> {
+		this.logger.info(`Trying to get all runs from projects ${code}`);
 
-		const runs: TmsRun[] = await this.tmsService.getRuns(code, {
-			limit: options.limit,
-			offset: options.offset,
-		});
+		const runs: TmsRun[] = await this.tmsService.getAllRuns(code);
 		this.logger.info(`Runs recivied successfully, count: ${runs.length}`);
 
 		this.logger.info(`Trying to get results from project ${code}`);

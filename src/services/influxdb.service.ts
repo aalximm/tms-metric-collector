@@ -78,7 +78,7 @@ export class InfluxDBService {
 		|> filter(fn: (r) => r._measurement == "${measurmentName}") 
 		|> last()`;
 		this.logger.info(`Trying to get Points`);
-		const result = await this.queryClient.collectRows<{ id: number; time: Date }>(query).catch(err => {
+		const result = await this.queryClient.collectRows<any>(query).catch(err => {
 			this.logger.error(err);
 			throw new InfluxDBError("Ошибка при получении данных от influxDB", err);
 		});
