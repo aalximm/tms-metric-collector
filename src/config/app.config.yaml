@@ -1,10 +1,11 @@
 tms:
     base_url: "https://api.qase.io/v1/"
     bucket_size: 100
-    tracked_runs_status: "complete"
 
 agregator:
     track_duration_of_empty_cases: false
+    recursive_counting_of_steps: true
+    initial_offset: 300
 
 influxdb:
     save_points_bucket_size: 500
@@ -22,3 +23,6 @@ influxdb:
             is_automation: "is automation run"
             id: "case id"
             run_id: "run id"
+
+logger:
+  level: "info"

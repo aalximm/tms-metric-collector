@@ -5,8 +5,9 @@ import { Format } from "logform";
 import { format } from "winston";
 import { inspect } from "util";
 import safeStringify from "fast-safe-stringify";
+import * as path from 'path';
 
-export const getLoggerConfig: IConfig<LoggerOptions> = () => {
+export const getLoggerConfig: IConfig<LoggerOptions> = (configService) => {
 	return {
 		transports: [
 			new winston.transports.Console({
@@ -19,8 +20,20 @@ export const getLoggerConfig: IConfig<LoggerOptions> = () => {
 					}),
 				),
 			}),
+			new winston.transports.File({
+				filename: path.resolve("logs", "info.log"),
+				level: "info"
+			}),
+			new winston.transports.File({
+				filename: path.resolve("logs", "verbose.log"),
+				level: "verbose"
+			}),
+			new winston.transports.File({
+				filename: path.resolve("logs", "warn.log"),
+				level: "warn"
+			})
 		],
-		level: "info",
+		level: configService.get<string>("logger.level"),
 	};
 };
 

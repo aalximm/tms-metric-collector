@@ -44,7 +44,7 @@ export interface TmsRun {
 	user_id: number;
 	stats: {
 		total: number;
-	}
+	};
 	environment: {
 		title: string;
 	};
@@ -73,6 +73,13 @@ export interface TmsCase {
 	id: number;
 	position: number;
 	title: string;
+	custom_fields: CutomField[];
 	description?: string;
+
 	steps: TmsStep[];
+}
+
+interface CutomField {
+	id: number;
+	value: string;
 }

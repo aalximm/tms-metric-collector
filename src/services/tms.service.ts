@@ -1,22 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { TmsOptions } from "@interfaces/options/tms.options";
-import { TMS_GET_AUTHOR_EP, TMS_GET_CASE_EP, TMS_GET_PROJECT_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP } from "@constants/tms.endpoints";
+import { TMS_GET_CASE_BY_ID_EP, TMS_GET_CASE_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN_EP } from "@constants/tms.endpoints";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { TmsProject, TmsApiResponse, TmsAuthor, TmsList, TmsRun, TmsRunResult, TmsCase } from "../dto/tms.dto";
+import { TmsApiResponse, TmsList, TmsRun, TmsRunResult, TmsCase } from "../dto/tms.dto";
 import { TmsException } from "@exceptions";
-import { getBuckets } from "@utils";
 import { LOGGER_PROVIDER, TMS_MODULE_OPTIONS } from "@constants/provider.tokens";
 import { ILogger } from "@interfaces/logger.interface";
 
 @Injectable()
 export class TmsService {
 	private axiosInstance: AxiosInstance;
-	private trackedRunStatus: string;
 	private bucketSize: number;
 
 	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(LOGGER_PROVIDER) private logger: ILogger) {
 		this.bucketSize = options.bucketSize;
-		this.trackedRunStatus = options.trackedRunsStatus;
 
 		this.axiosInstance = axios.create({
 			baseURL: options.baseUrl,
@@ -56,89 +53,94 @@ export class TmsService {
 		this.logger.initService(this.constructor.name, options);
 	}
 
-	public async getProjectByCode(code: string): Promise<TmsProject> {
-		const response = await this.axiosInstance.get<TmsApiResponse<TmsProject>>(TMS_GET_PROJECT_EP(code));
-		return response.data.result;
-	}
-
-	public async getAuthorsByType(type: string): Promise<TmsAuthor[]> {
-		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsAuthor>>>(TMS_GET_AUTHOR_EP, {
-			params: {
-				type: type,
-			},
-		});
-		return response.data.result.entities;
-	}
-
-	public async getResults(
-		code: string,
-		filterOptions?: {
-			runs?: number[];
-			limit?: number;
-			offset?: number;
-		},
-	): Promise<TmsRunResult[]> {
-		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsRunResult>>>(TMS_GET_RESULTS_EP(code), {
-			params: {
-				limit: filterOptions?.limit ?? 10,
-				offset: filterOptions?.offset ?? 0,
-				run: filterOptions?.runs?.join(",") ?? null,
-			},
-		});
-		return response.data.result.entities;
-	}
-
 	public async getResultsByRuns(code: string, runs: TmsRun[]): Promise<TmsRunResult[]> {
-		const tasks = runs.map(run => {
-			const subtasks: Promise<TmsRunResult[]>[] = [];
-			for (let offset = 0; offset < run.stats.total; offset += this.bucketSize) {
-				subtasks.push(this.getResults(code, { runs: [run.id], limit: this.bucketSize, offset }));
-			}
-			return Promise.all(subtasks).then<TmsRunResult[]>(subtaskResults => [].concat(...subtaskResults));
-		});
-		return Promise.all(tasks).then<TmsRunResult[]>(taskResults => [].concat(...taskResults));
+		const runsId = runs.map(run => run.id);
+		const tasks: Promise<TmsRunResult[]>[] = [];
+
+		const [, total] = await this.getResults(code, { runs: runsId, offset: 0, limit: 1 });
+
+		for (let offset = 0; offset < total; offset += this.bucketSize) {
+			tasks.push(this.getResults(code, { runs: runsId, offset: offset, limit: this.bucketSize }).then(([result]) => result));
+		}
+
+		return Promise.all(tasks).then(results => [].concat(...results));
 	}
 
-	private async getRuns(code: string, options: { limit: number; offset: number; status: string }): Promise<TmsRun[]> {
-		const response = await this.axiosInstance
-			.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {
-				params: {
-					limit: options.limit,
-					offset: options.offset,
-					status: options.status,
-				},
-			});
-		return response.data.result.entities;
+	public async getAllRuns(code: string, initialOffset?: number): Promise<TmsRun[]> {
+		const tasks: Promise<TmsRun[]>[] = [];
+
+		const [, total] = await this.getRuns(code, { offset: 0, limit: 1 });
+		this.logger.info(`Runs total: ${total}`);
+
+		for (let offset = initialOffset ?? 0; offset < total; offset += this.bucketSize) {
+			tasks.push(this.getRuns(code, { offset: offset, limit: this.bucketSize }).then(([result]) => result));
+		}
+
+		return Promise.all(tasks).then(results => [].concat(...results));
 	}
 
-	public async getAllRuns(code): Promise<TmsRun[]> {
-		const runs = [];
-		let response = null;
-		let offset = 0;
-		do {
-			response = await this.getRuns(code, { offset, limit: this.bucketSize, status: this.trackedRunStatus })
-			runs.push(...response);
-			offset += this.bucketSize;
-		} while (response?.length != 0)
-
-		return runs;
+	public async getCasesById(code: string, casesId: number[]): Promise<TmsCase[]> {
+		const tasks: Promise<TmsCase>[] = [];
+		casesId.forEach(caseId => tasks.push(this.getCaseById(code, caseId).catch(err => null)));
+		return Promise.all(tasks).then(results => [].concat(results.filter(res => res != null)));
 	}
 
-	public async getCases(code: string, filterOptions?: { limit?: number; offset?: number }): Promise<TmsCase[]> {
+	private async getCases(code: string, filterOptions?: { limit?: number; offset?: number }): Promise<TmsCase[]> {
 		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsCase>>>(TMS_GET_CASE_EP(code), {
 			params: {
 				limit: filterOptions?.limit ?? 10,
 				offset: filterOptions?.offset ?? 0,
 			},
 		});
-		return response.data.result.entities;
+
+		const entities: TmsCase[] = response.data.result.entities;
+		entities.forEach(ent => {
+			this.logger.verbose(`Case ${ent.id}, steps number ${ent.steps.length}`);
+		});
+		return entities;
 	}
 
-	public async getCasesById(code: string, casesId: number[]): Promise<TmsCase[]> {
-		const buckets: { startOfBucket: number; bucketSize: number }[] = getBuckets(casesId, this.bucketSize);
-		const tasks = buckets.map(bucket =>
-			this.getCases(code, { limit: bucket.bucketSize, offset: bucket.startOfBucket }).then((cases: TmsCase[]) => cases.filter(value => casesId.includes(value.id))),
-		);
-		return Promise.all(tasks).then<TmsCase[]>((results: TmsCase[][]) => [].concat(...results));
+	private async getCaseById(code: string, caseId: number): Promise<TmsCase> {
+		const response = await this.axiosInstance.get<TmsApiResponse<TmsCase>>(TMS_GET_CASE_BY_ID_EP(code, caseId));
+		return response.data.result;
+	}
+
+	private async getRuns(code: string, options: { limit: number; offset: number; status?: string }): Promise<[TmsRun[], number]> {
+		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {
+			params: {
+				limit: options.limit,
+				offset: options.offset,
+				status: options.status,
+			},
+		});
+		const entities: TmsRun[] = response.data.result.entities;
+		const count: number = response.data.result.filtered;
+		entities.forEach(ent => {
+			this.logger.verbose(`Run: ${ent.id}, startTime ${ent.start_time}, endTime ${ent.end_time}`);
+		});
+		return [entities, count];
+	}
+
+	private async getResults(
+		code: string,
+		filterOptions?: {
+			runs?: number[];
+			limit?: number;
+			offset?: number;
+		},
+	): Promise<[TmsRunResult[], number]> {
+		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsRunResult>>>(TMS_GET_RESULTS_EP(code), {
+			params: {
+				run: filterOptions?.runs?.join(",") ?? null,
+				limit: filterOptions?.limit ?? null,
+				offset: filterOptions?.offset ?? null,
+			},
+		});
+		const entities: TmsRunResult[] = response.data.result.entities;
+		const count: number = response.data.result.total;
+		entities.forEach(ent => {
+			this.logger.verbose(`Result: run ${ent.run_id}, case ${ent.case_id}, endTime ${ent.end_time}`);
+		});
+		return [entities, count];
 	}
 }

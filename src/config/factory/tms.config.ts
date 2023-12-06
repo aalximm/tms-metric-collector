@@ -6,6 +6,5 @@ export const getTmsConfig: IConfig<TmsOptions> = (configService) => {
 		token: configService.get<string>("TMS_TOKEN"),
 		baseUrl: configService.get<string>("tms.base_url"),
 		bucketSize: configService.get<number>("tms.bucket_size"),
-		trackedRunsStatus: configService.get<string>("tms.tracked_runs_status"),
 	};
 };
