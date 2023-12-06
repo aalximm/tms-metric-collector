@@ -5,7 +5,7 @@ tms:
 agregator:
     track_duration_of_empty_cases: false
     recursive_counting_of_steps: true
-    initial_offset: 300
+    initial_offset: 0
 
 influxdb:
     save_points_bucket_size: 500
