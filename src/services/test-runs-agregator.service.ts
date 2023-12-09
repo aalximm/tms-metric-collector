@@ -56,11 +56,11 @@ export class TestRunsAgregatorService {
 		const dif = casesId.filter(c => !recievedCasesId.includes(c));
 		this.logger.warn(`Cases were not recieved: ${JSON.stringify(dif)}`);
 
-		const caseStepsMap = new Map<number, number>();
-		cases.forEach(value => caseStepsMap.set(value.id, this.getStepsNumber(value, true)));
+		const caseDataMap = new Map<number, {stepsNumber: number, automationStatus: number}>();
+		cases.forEach(value => caseDataMap.set(value.id, { stepsNumber: this.getStepsNumber(value, true), automationStatus: value.automation }));
 
-		const emptyCases = Array.from(caseStepsMap.entries())
-			.filter(([, value]) => value == 0)
+		const emptyCases = Array.from(caseDataMap.entries())
+			.filter(([, value]) => value.stepsNumber == 0)
 			.map(([key]) => key);
 		this.logger.warn(`These cases are empty: ${JSON.stringify(emptyCases)}`);
 
@@ -73,8 +73,9 @@ export class TestRunsAgregatorService {
 					endTime: new Date(value.end_time),
 					id: value.case_id,
 					runId: run.id,
-					stepsNumber: caseStepsMap.get(value.case_id) ?? 0,
+					stepsNumber: caseDataMap.get(value.case_id) ? caseDataMap.get(value.case_id).stepsNumber : 0,
 					status: value.status,
+					automationStatus: caseDataMap.get(value.case_id) ? caseDataMap.get(value.case_id).automationStatus : -1
 				});
 			}, this);
 

@@ -20,6 +20,7 @@ export interface CaseInfluxDBSchema {
 	steps_number: string;
 	duration: string;
 	is_automation: string;
+	automation_status: string;
 	id?: string;
 	run_id?: string;
 	status?: string;

@@ -60,6 +60,7 @@ export class TestCaseRun {
 			.intField(caseSchema.steps_number, this.caseData.stepsNumber)
 			.intField(caseSchema.duration, this.caseData.endTime.getTime() - this.caseData.startTime.getTime())
 			.booleanField(caseSchema.is_automation, isAuto)
+			.intField(caseSchema.automation_status, this.caseData.automationStatus)
 			//optional fields
 			.safeStringField(caseSchema.id, this.caseData.id.toString())
 			.safeStringField(caseSchema.run_id, this.caseData.runId.toString())

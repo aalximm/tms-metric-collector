@@ -5,6 +5,7 @@ export interface ITestCaseRun {
 	runId: number;
 	stepsNumber: number;
 	status: string;
+	automationStatus: number;
 }
 
 export interface ITestRun {

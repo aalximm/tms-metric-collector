@@ -73,13 +73,9 @@ export interface TmsCase {
 	id: number;
 	position: number;
 	title: string;
-	custom_fields: CutomField[];
+	automation: number;
 	description?: string;
 
 	steps: TmsStep[];
 }
 
-interface CutomField {
-	id: number;
-	value: string;
-}

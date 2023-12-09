@@ -23,6 +23,7 @@ influxdb:
             is_automation: "is automation run"
             id: "case id"
             run_id: "run id"
+            automation_status: "automation status"
 
 logger:
   level: "info"
