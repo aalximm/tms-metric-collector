@@ -2,7 +2,7 @@ import { Point } from "@influxdata/influxdb-client";
 import { ITestRun } from "@interfaces/testrun.interfaces";
 import { Inject, Injectable } from "@nestjs/common";
 import { TestRun, TestCaseRun } from "../classes/testrun.class";
-import { TmsRun, TmsRunResult, TmsStep } from "../dto/tms.dto";
+import { TmsCase, TmsRun, TmsRunResult, TmsStep } from "../dto/tms.dto";
 import { InfluxDBService, TmsService } from "@services";
 import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER, TEST_RUNS_AGREGATOR_MODULE_OPTIONS, TMS_SERVICE_PROVIDER } from "@constants/provider.tokens";
 import { ILogger } from "@interfaces/logger.interface";
@@ -25,11 +25,26 @@ export class TestRunsAgregatorService {
 		this.logger.initService(this.constructor.name, options);
 	}
 
-	public async updateDataBase(code: string): Promise<number> {
+	public async loadRunsToDatabase(code: string): Promise<number> {
 		const testRuns: TestRun[] = await this.agregateAllRuns(code);
 
-		const influxDBSchema = this.influxDBService.getSchema();
-		const points: Point[] = testRuns.flatMap(run => run.toPoints(influxDBSchema, this.trackTimeOfEmptyCases));
+		const schema = this.influxDBService.getSchema();
+		const points: Point[] = testRuns.flatMap(run => run.toPoints(schema, this.trackTimeOfEmptyCases));
+		return await this.influxDBService.savePoints(points);
+	}
+
+	public async loadCasesToDatabase(code: string): Promise<number> {
+		const cases: TmsCase[] = await this.tmsService.getAllCases(code);
+		this.logger.info(`Loaded ${cases.length} cases`);
+
+		const schema = this.influxDBService.getSchema().backlog_case;
+		const points: Point[] = cases.map(tmsCase => {
+			return new Point(schema.measurment_name)
+				.stringField(schema.case_name, tmsCase.title)
+				.stringField(schema.id, tmsCase.id)
+				.stringField(schema.automation_status, tmsCase.automation.toString() ?? -1)
+				.intField(schema.steps_number, this.getStepsNumber(tmsCase, this.recursiveCountingOfSteps));
+		});
 		return await this.influxDBService.savePoints(points);
 	}
 
@@ -56,7 +71,7 @@ export class TestRunsAgregatorService {
 		const dif = casesId.filter(c => !recievedCasesId.includes(c));
 		this.logger.warn(`Cases were not recieved: ${JSON.stringify(dif)}`);
 
-		const caseDataMap = new Map<number, {stepsNumber: number, automationStatus: number}>();
+		const caseDataMap = new Map<number, { stepsNumber: number; automationStatus: number }>();
 		cases.forEach(value => caseDataMap.set(value.id, { stepsNumber: this.getStepsNumber(value, true), automationStatus: value.automation }));
 
 		const emptyCases = Array.from(caseDataMap.entries())
@@ -75,7 +90,7 @@ export class TestRunsAgregatorService {
 					runId: run.id,
 					stepsNumber: caseDataMap.get(value.case_id) ? caseDataMap.get(value.case_id).stepsNumber : 0,
 					status: value.status,
-					automationStatus: caseDataMap.get(value.case_id) ? caseDataMap.get(value.case_id).automationStatus : -1
+					automationStatus: caseDataMap.get(value.case_id) ? caseDataMap.get(value.case_id).automationStatus : -1,
 				});
 			}, this);
 
@@ -113,10 +128,6 @@ export class TestRunsAgregatorService {
 		return sortedResults;
 	}
 
-	private sortByEndTimeComparator = (a: TmsRunResult, b: TmsRunResult) => {
-		return new Date(a.end_time).getTime() - new Date(b.end_time).getTime();
-	};
-
 	private getStepsNumber(stepful: { steps: TmsStep[] }, isCase: boolean): number {
 		if (!this.recursiveCountingOfSteps) return stepful.steps.length;
 		if (stepful.steps && stepful.steps.length == 0) return isCase ? 0 : 1;
@@ -127,6 +138,10 @@ export class TestRunsAgregatorService {
 		}
 		return result;
 	}
+
+	private sortByEndTimeComparator = (a: TmsRunResult, b: TmsRunResult) => {
+		return new Date(a.end_time).getTime() - new Date(b.end_time).getTime();
+	};
 
 	private checkAutomation(run: TmsRun): boolean {
 		return this.automationRunDescriptionRegExp.test(run.description);

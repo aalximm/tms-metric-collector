@@ -24,6 +24,12 @@ influxdb:
             id: "case id"
             run_id: "run id"
             automation_status: "automation status"
+        backlog_case:
+          measurment_name: "backlog case"
+          steps_number: "steps number"
+          case_name: "case name"
+          id: "case id"
+          automation_status: "automation status"
 
 logger:
   level: "info"

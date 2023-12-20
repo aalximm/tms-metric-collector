@@ -44,10 +44,10 @@ export class TmsService {
 				);
 				return response;
 			},
-			(err: AxiosError) => {
-				logger.error(`Incoming response error: ${JSON.stringify(err.toJSON())}`, err.stack);
-				return Promise.reject(new TmsException(err));
-			},
+			// (err: AxiosError) => {
+			// 	logger.error(`Incoming response error: ${JSON.stringify(err.toJSON())}`, err.stack);
+			// 	return Promise.reject(new TmsException(err));
+			// },
 		);
 
 		this.logger.initService(this.constructor.name, options);
@@ -85,7 +85,20 @@ export class TmsService {
 		return Promise.all(tasks).then(results => [].concat(results.filter(res => res != null)));
 	}
 
-	private async getCases(code: string, filterOptions?: { limit?: number; offset?: number }): Promise<TmsCase[]> {
+	public async getAllCases(code: string, initialOffset=0): Promise<TmsCase[]> {
+		const tasks: Promise<TmsCase[]>[] = [];
+
+		const [, total] = await this.getCases(code, { offset: 0, limit: 1 });
+		this.logger.info(`Runs total: ${total}`);
+
+		for (let offset = initialOffset ?? 0; offset < total; offset += this.bucketSize) {
+			tasks.push(this.getCases(code, { offset: offset, limit: this.bucketSize }).then(([result]) => result));
+		}
+
+		return Promise.all(tasks).then(results => [].concat(...results));
+	}
+
+	private async getCases(code: string, filterOptions?: { limit?: number; offset?: number }): Promise<[TmsCase[], number]> {
 		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsCase>>>(TMS_GET_CASE_EP(code), {
 			params: {
 				limit: filterOptions?.limit ?? 10,
@@ -94,10 +107,11 @@ export class TmsService {
 		});
 
 		const entities: TmsCase[] = response.data.result.entities;
+		const count: number = response.data.result.filtered;
 		entities.forEach(ent => {
 			this.logger.verbose(`Case ${ent.id}, steps number ${ent.steps.length}`);
 		});
-		return entities;
+		return [entities, count];
 	}
 
 	private async getCaseById(code: string, caseId: number): Promise<TmsCase> {

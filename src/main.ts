@@ -10,13 +10,14 @@ async function bootstrap() {
 	});
 	const influxdbService = app.get<InfluxDBService>(INFLUX_DB_SERVICE_PROVIDER);
 	const testRunAgregatorService = app.get<TestRunsAgregatorService>(TEST_RUNS_AGREGATOR_SERVICE_PROVIDER);
-	
+
 	const configService: ConfigService = app.get(ConfigService);
-	const projectCode = configService.get<string>("TEST_AGREGATOR_PROJECT_CODE")
+	const projectCode = configService.get<string>("TEST_AGREGATOR_PROJECT_CODE");
 
 	await influxdbService.tryToConnect(20);
 
-	await testRunAgregatorService.updateDataBase(projectCode);
+	await testRunAgregatorService.loadRunsToDatabase(projectCode);
+	await testRunAgregatorService.loadCasesToDatabase(projectCode);
 
 	app.close();
 }

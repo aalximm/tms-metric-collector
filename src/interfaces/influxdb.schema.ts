@@ -1,6 +1,7 @@
 export interface InfluxDBSchema {
 	test_run: RunInfluxDBSchema;
 	test_case?: CaseInfluxDBSchema;
+	backlog_case: BacklogCaseSchema;
 }
 
 export interface RunInfluxDBSchema {
@@ -25,3 +26,11 @@ export interface CaseInfluxDBSchema {
 	run_id?: string;
 	status?: string;
 };
+
+export interface BacklogCaseSchema {
+	measurment_name: string;
+	case_name: string;
+	steps_number: string;
+	automation_status: string;
+	id: string;
+}
