@@ -7,6 +7,7 @@ import { InfluxDBService, TmsService } from "@services";
 import { INFLUX_DB_SERVICE_PROVIDER, LOGGER_PROVIDER, TEST_RUNS_AGREGATOR_MODULE_OPTIONS, TMS_SERVICE_PROVIDER } from "@constants/provider.tokens";
 import { ILogger } from "@interfaces/logger.interface";
 import { TestRunsAgregatorOptions } from "@interfaces/options/test-runs-agregator.options";
+import { Iterable } from "@interfaces/iterable.interface";
 
 @Injectable()
 export class TestRunsAgregatorService {
@@ -25,12 +26,21 @@ export class TestRunsAgregatorService {
 		this.logger.initService(this.constructor.name, options);
 	}
 
-	public async loadRunsToDatabase(code: string): Promise<number> {
-		const testRuns: TestRun[] = await this.agregateAllRuns(code);
-
+	public async loadRunsToDatabase(code: string): Promise<void> {
+		const runsIterator = new (this.getRunsIterator())(200, code);
 		const schema = this.influxDBService.getSchema();
-		const points: Point[] = testRuns.flatMap(run => run.toPoints(schema, this.trackTimeOfEmptyCases));
-		return await this.influxDBService.savePoints(points);
+		await runsIterator.init();
+
+		while (runsIterator.hasNext()) {
+			const tmsRuns: TmsRun[] = await runsIterator.next();
+			this.logger.debug(tmsRuns);
+
+			const testRuns: TestRun[] = await this.extractResults(code, tmsRuns);
+			const points: Point[] = testRuns.flatMap(run => run.toPoints(schema, this.trackTimeOfEmptyCases));
+
+			await this.influxDBService.savePoints(points);
+		}
+
 	}
 
 	public async loadCasesToDatabase(code: string): Promise<number> {
@@ -48,24 +58,16 @@ export class TestRunsAgregatorService {
 		return await this.influxDBService.savePoints(points);
 	}
 
-	private async agregateAllRuns(code: string): Promise<TestRun[]> {
-		this.logger.info(`Trying to get all runs from projects ${code}`);
+	private async extractResults(code: string, runs: TmsRun[]): Promise<TestRun[]> {
 
-		const runs: TmsRun[] = await this.tmsService.getAllRuns(code, this.initialOffset);
-		this.logger.info(`Runs recivied successfully, count: ${runs.length}`);
-
-		this.logger.info(`Trying to get results from project ${code}`);
+		this.logger.debug("heyyyyyyyy")
+		
 		const results = await this.tmsService.getResultsByRuns(code, runs);
-		this.logger.info(`Results recieved successfully, count: ${results.length}`);
-
-		const includedRuns = new Set(results.map(result => result.run_id));
-		this.logger.info(`Results include unique runs: ${includedRuns.size}`);
+		this.logger.debug("heyyyyyyyy222")
 
 		const casesId = [...new Set(results.map(res => res.case_id))];
 
-		this.logger.info(`Trying to get cases information from projects ${code}, unique cases number: ${casesId.length}`);
 		const cases = await this.tmsService.getCasesById(code, casesId);
-		this.logger.info(`Cases information recevied successfully, length: ${cases.length}`);
 
 		const recievedCasesId = cases.map(c => c.id);
 		const dif = casesId.filter(c => !recievedCasesId.includes(c));
@@ -148,4 +150,43 @@ export class TestRunsAgregatorService {
 	}
 
 	private automationRunDescriptionRegExp = /Playwright/;
+
+	private getRunsIterator = () => {
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const $outer = this;
+
+		class RunsIterator implements Iterable<TmsRun> {
+			private readonly tmsService: TmsService;
+			private maxPosition: number;
+			private currentPosition: number;
+
+			constructor(private bucketSize: number, private code: string) {
+				this.tmsService = $outer.tmsService;
+			}
+
+			public async hasNext(): Promise<boolean> {
+				
+				return this.currentPosition < this.maxPosition;
+			}
+
+			public async next(): Promise<TmsRun[]> {
+
+				const results = await this.tmsService.getAllRuns(
+					this.code,
+					this.currentPosition,
+					Math.min(this.maxPosition, this.currentPosition + this.bucketSize));
+				
+				this.currentPosition += this.bucketSize;
+
+				return results;
+			}
+
+			public async init(): Promise<void> {
+				[, this.maxPosition] = await this.tmsService.getRuns(this.code, { offset: 0, limit: 1 });
+				this.currentPosition = 0;
+			}
+		}
+
+		return RunsIterator;
+	};
 }

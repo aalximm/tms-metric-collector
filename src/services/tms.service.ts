@@ -10,7 +10,7 @@ import { ILogger } from "@interfaces/logger.interface";
 @Injectable()
 export class TmsService {
 	private axiosInstance: AxiosInstance;
-	private bucketSize: number;
+	public bucketSize: number;
 
 	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(LOGGER_PROVIDER) private logger: ILogger) {
 		this.bucketSize = options.bucketSize;
@@ -29,7 +29,7 @@ export class TmsService {
 			},
 			(err: AxiosError) => {
 				logger.error(`Request error: ${JSON.stringify(err.toJSON())}`, err.stack);
-				return Promise.reject(new TmsException(err));
+				return new TmsException(err);
 			},
 		);
 
@@ -66,14 +66,11 @@ export class TmsService {
 		return Promise.all(tasks).then(results => [].concat(...results));
 	}
 
-	public async getAllRuns(code: string, initialOffset?: number): Promise<TmsRun[]> {
+	public async getAllRuns(code: string, from: number, to: number): Promise<TmsRun[]> {
 		const tasks: Promise<TmsRun[]>[] = [];
 
-		const [, total] = await this.getRuns(code, { offset: 0, limit: 1 });
-		this.logger.info(`Runs total: ${total}`);
-
-		for (let offset = initialOffset ?? 0; offset < total; offset += this.bucketSize) {
-			tasks.push(this.getRuns(code, { offset: offset, limit: this.bucketSize }).then(([result]) => result));
+		for (let offset = from; offset < to; offset += Math.min(this.bucketSize, to - offset)) {
+			tasks.push(this.getRuns(code, { offset: offset, limit: Math.min(this.bucketSize, to - offset) }).then(([result]) => result));
 		}
 
 		return Promise.all(tasks).then(results => [].concat(...results));
@@ -119,7 +116,7 @@ export class TmsService {
 		return response.data.result;
 	}
 
-	private async getRuns(code: string, options: { limit: number; offset: number; status?: string }): Promise<[TmsRun[], number]> {
+	public async getRuns(code: string, options: { limit: number; offset: number; status?: string }): Promise<[TmsRun[], number]> {
 		const response = await this.axiosInstance.get<TmsApiResponse<TmsList<TmsRun>>>(TMS_GET_RUN_EP(code), {
 			params: {
 				limit: options.limit,
