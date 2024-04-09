@@ -8,6 +8,8 @@ import { TestRunsAgregatorModule } from "./test-runs-agregator.module";
 import * as Joi from "joi";
 import configuration from "@config/app.config";
 import { getTestRunsAgregatorConfig } from "@config/factory/test-runs-agregator.config";
+import { BucketExecutorModule } from "./bucketexecutor.module";
+import { getBucketExecutorConfig } from "@config/factory/bucketexecutor.config";
 
 @Module({
 	imports: [
@@ -41,6 +43,11 @@ import { getTestRunsAgregatorConfig } from "@config/factory/test-runs-agregator.
 		}),
 		TestRunsAgregatorModule.forRootAsync({
 			useFactory: getTestRunsAgregatorConfig,
+			imports: [ConfigModule],
+			inject: [ConfigService]
+		}),
+		BucketExecutorModule.forRootAsync({
+			useFactory: getBucketExecutorConfig,
 			imports: [ConfigModule],
 			inject: [ConfigService]
 		}),

@@ -90,3 +90,36 @@ export class Logger implements ILogger {
 		return this.logger.verbose(message, { context });
 	}
 }
+
+export class ProgressBar {
+	private max: number;
+	private title: string;
+	private prevValue: number;
+	private parts: number;
+
+	constructor(private readonly logger: ILogger, private lineSize = 40) {}
+
+	public start(max: number, processName?: string, parts=10): void {
+		this.max = max;
+		this.parts = parts;
+		this.title = processName ?? Math.floor(Math.random() * 1000000).toString();
+		this.logger.info(`Process "${this.title}" started`);
+	}
+
+	public set(current: number, message?: string) {
+		this.printLine(current, message);
+	}
+
+	public end(message?: string) {
+		this.printLine(this.max);
+		this.logger.info(`Process "${this.title}" ${message ?? "finished"}`);
+	}
+
+	private printLine(current: number, message?: string) {
+		
+		if (Math.floor(this.prevValue / this.max * this.parts) == Math.floor(current / this.max * this.parts)) return;
+		const value = Math.floor((current / this.max) * this.lineSize);
+		this.logger.info(`[${"=".repeat(value)}${" ".repeat(this.lineSize - value)}] ${message ?? this.title}: ${current}/${this.max}`);
+		this.prevValue = current;
+	}
+}

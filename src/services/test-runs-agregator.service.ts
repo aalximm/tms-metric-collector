@@ -31,16 +31,13 @@ export class TestRunsAgregatorService {
 		const schema = this.influxDBService.getSchema();
 		await runsIterator.init();
 
-		while (runsIterator.hasNext()) {
+		while (await runsIterator.hasNext()) {
 			const tmsRuns: TmsRun[] = await runsIterator.next();
-			this.logger.debug(tmsRuns);
-
 			const testRuns: TestRun[] = await this.extractResults(code, tmsRuns);
 			const points: Point[] = testRuns.flatMap(run => run.toPoints(schema, this.trackTimeOfEmptyCases));
 
 			await this.influxDBService.savePoints(points);
 		}
-
 	}
 
 	public async loadCasesToDatabase(code: string): Promise<number> {
@@ -60,14 +57,14 @@ export class TestRunsAgregatorService {
 
 	private async extractResults(code: string, runs: TmsRun[]): Promise<TestRun[]> {
 
-		this.logger.debug("heyyyyyyyy")
-		
+		this.logger.info('Trying to fetch results');
 		const results = await this.tmsService.getResultsByRuns(code, runs);
-		this.logger.debug("heyyyyyyyy222")
+		this.logger.info('Results fetched succsessfuly, count: ' + results.length);
 
+		this.logger.info('Trying to fetch cases');
 		const casesId = [...new Set(results.map(res => res.case_id))];
-
 		const cases = await this.tmsService.getCasesById(code, casesId);
+		this.logger.info('Cases fetched succsessfuly');
 
 		const recievedCasesId = cases.map(c => c.id);
 		const dif = casesId.filter(c => !recievedCasesId.includes(c));
@@ -157,25 +154,26 @@ export class TestRunsAgregatorService {
 
 		class RunsIterator implements Iterable<TmsRun> {
 			private readonly tmsService: TmsService;
+			private readonly logger: ILogger;
 			private maxPosition: number;
 			private currentPosition: number;
 
 			constructor(private bucketSize: number, private code: string) {
 				this.tmsService = $outer.tmsService;
+				this.logger = $outer.logger;
 			}
 
 			public async hasNext(): Promise<boolean> {
-				
 				return this.currentPosition < this.maxPosition;
 			}
 
 			public async next(): Promise<TmsRun[]> {
+				this.logger.info(`Trying to fetch runs from ${this.currentPosition} to ${Math.min(this.maxPosition, this.currentPosition + this.bucketSize)}`);
 
-				const results = await this.tmsService.getAllRuns(
-					this.code,
-					this.currentPosition,
-					Math.min(this.maxPosition, this.currentPosition + this.bucketSize));
-				
+				const results = await this.tmsService.getAllRuns(this.code, this.currentPosition, Math.min(this.maxPosition, this.currentPosition + this.bucketSize));
+
+				this.logger.info('Runs fetched succsessfuly, count: ' + results.length);
+
 				this.currentPosition += this.bucketSize;
 
 				return results;

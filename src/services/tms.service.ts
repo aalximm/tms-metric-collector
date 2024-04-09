@@ -4,15 +4,21 @@ import { TMS_GET_CASE_BY_ID_EP, TMS_GET_CASE_EP, TMS_GET_RESULTS_EP, TMS_GET_RUN
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { TmsApiResponse, TmsList, TmsRun, TmsRunResult, TmsCase } from "../dto/tms.dto";
 import { TmsException } from "@exceptions";
-import { LOGGER_PROVIDER, TMS_MODULE_OPTIONS } from "@constants/provider.tokens";
+import { BUCKET_EXECUTOR_SERVICE_PROVICER as BUCKET_EXECUTOR_SERVICE_PROVIDER, LOGGER_PROVIDER, TMS_MODULE_OPTIONS } from "@constants/provider.tokens";
 import { ILogger } from "@interfaces/logger.interface";
+import { BucketExecutorService } from "./bucketexecutor.service";
+import { Iterable } from "@interfaces/iterable.interface";
 
 @Injectable()
 export class TmsService {
 	private axiosInstance: AxiosInstance;
 	public bucketSize: number;
 
-	constructor(@Inject(TMS_MODULE_OPTIONS) options: TmsOptions, @Inject(LOGGER_PROVIDER) private logger: ILogger) {
+	constructor(
+		@Inject(TMS_MODULE_OPTIONS) options: TmsOptions,
+		@Inject(LOGGER_PROVIDER) private logger: ILogger,
+		@Inject(BUCKET_EXECUTOR_SERVICE_PROVIDER) private bucketExecutor: BucketExecutorService,
+	) {
 		this.bucketSize = options.bucketSize;
 
 		this.axiosInstance = axios.create({
@@ -24,11 +30,22 @@ export class TmsService {
 
 		this.axiosInstance.interceptors.request.use(
 			config => {
-				logger.debug(`Outgoing request:\n${JSON.stringify(config, null, 2)}`);
+				logger.debug(
+					`Outgoing request:\n${JSON.stringify(
+						{
+							method: config.method ?? "none",
+							baseUrl: config.baseURL ?? "none",
+							params: config.params ?? "none",
+							date: config.data ?? "none",
+						},
+						null,
+						2,
+					)}`,
+				);
 				return config;
 			},
 			(err: AxiosError) => {
-				logger.error(`Request error: ${JSON.stringify(err.toJSON())}`, err.stack);
+				logger.error(`Request error: ${JSON.stringify(err.message)}`);
 				return new TmsException(err);
 			},
 		);
@@ -44,17 +61,17 @@ export class TmsService {
 				);
 				return response;
 			},
-			// (err: AxiosError) => {
-			// 	logger.error(`Incoming response error: ${JSON.stringify(err.toJSON())}`, err.stack);
-			// 	return Promise.reject(new TmsException(err));
-			// },
+			(err: AxiosError) => {
+				logger.warn(`${err.message}:\nurl: ${err.config.baseURL + err.config.url}\nparams: ${JSON.stringify(err.config.params) ?? "none"}`);
+				return Promise.reject(new TmsException(err));
+			},
 		);
 
 		this.logger.initService(this.constructor.name, options);
 	}
 
 	public async getResultsByRuns(code: string, runs: TmsRun[]): Promise<TmsRunResult[]> {
-		const runsId = runs.map(run => run.id);
+		const runsId = runs.map(run => run.id).sort();
 		const tasks: Promise<TmsRunResult[]>[] = [];
 
 		const [, total] = await this.getResults(code, { runs: runsId, offset: 0, limit: 1 });
@@ -63,7 +80,7 @@ export class TmsService {
 			tasks.push(this.getResults(code, { runs: runsId, offset: offset, limit: this.bucketSize }).then(([result]) => result));
 		}
 
-		return Promise.all(tasks).then(results => [].concat(...results));
+		return await this.bucketExecutor.executeAll(tasks, `results for run ids [${runsId[0]} ... ${runsId.at(-1)}] loading`);
 	}
 
 	public async getAllRuns(code: string, from: number, to: number): Promise<TmsRun[]> {
@@ -73,26 +90,50 @@ export class TmsService {
 			tasks.push(this.getRuns(code, { offset: offset, limit: Math.min(this.bucketSize, to - offset) }).then(([result]) => result));
 		}
 
-		return Promise.all(tasks).then(results => [].concat(...results));
+		return await this.bucketExecutor.executeAll(tasks, `runs ${from} - ${to} loading`);
 	}
 
 	public async getCasesById(code: string, casesId: number[]): Promise<TmsCase[]> {
-		const tasks: Promise<TmsCase>[] = [];
-		casesId.forEach(caseId => tasks.push(this.getCaseById(code, caseId).catch(err => null)));
-		return Promise.all(tasks).then(results => [].concat(results.filter(res => res != null)));
+		const tasks: Promise<TmsCase[]>[] = [];
+
+		casesId.sort();
+
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const $outer = this;
+
+		const generator = new class implements Iterable<Promise<TmsCase[]>> {
+
+			private i = 0;
+			private outer = $outer;
+
+			hasNext(): boolean | Promise<boolean> {
+				return this.i < casesId.length;
+			}
+
+			next(): Promise<TmsCase[]>[] {
+				const tasks: Promise<TmsCase[]>[] = [];
+				tasks.push(this.outer.getCaseById(code, casesId[this.i])
+					.then(res => [res])
+					.catch(err => <TmsCase[]>[]));
+				this.i++;
+				return tasks;
+			}
+		}();
+
+		return await this.bucketExecutor.executeAllFromGenerator(generator, `cases loading by id [${casesId[0]} ... ${casesId.at(-1)}]`);
 	}
 
-	public async getAllCases(code: string, initialOffset=0): Promise<TmsCase[]> {
+	public async getAllCases(code: string, initialOffset = 0): Promise<TmsCase[]> {
 		const tasks: Promise<TmsCase[]>[] = [];
 
 		const [, total] = await this.getCases(code, { offset: 0, limit: 1 });
-		this.logger.info(`Runs total: ${total}`);
+		this.logger.info(`Cases total: ${total}`);
 
 		for (let offset = initialOffset ?? 0; offset < total; offset += this.bucketSize) {
 			tasks.push(this.getCases(code, { offset: offset, limit: this.bucketSize }).then(([result]) => result));
 		}
 
-		return Promise.all(tasks).then(results => [].concat(...results));
+		return await this.bucketExecutor.executeAll(tasks, "all cases loading");
 	}
 
 	private async getCases(code: string, filterOptions?: { limit?: number; offset?: number }): Promise<[TmsCase[], number]> {
@@ -105,9 +146,7 @@ export class TmsService {
 
 		const entities: TmsCase[] = response.data.result.entities;
 		const count: number = response.data.result.filtered;
-		entities.forEach(ent => {
-			this.logger.verbose(`Case ${ent.id}, steps number ${ent.steps.length}`);
-		});
+
 		return [entities, count];
 	}
 
@@ -126,9 +165,6 @@ export class TmsService {
 		});
 		const entities: TmsRun[] = response.data.result.entities;
 		const count: number = response.data.result.filtered;
-		entities.forEach(ent => {
-			this.logger.verbose(`Run: ${ent.id}, startTime ${ent.start_time}, endTime ${ent.end_time}`);
-		});
 		return [entities, count];
 	}
 
@@ -147,11 +183,10 @@ export class TmsService {
 				offset: filterOptions?.offset ?? null,
 			},
 		});
+
 		const entities: TmsRunResult[] = response.data.result.entities;
 		const count: number = response.data.result.total;
-		entities.forEach(ent => {
-			this.logger.verbose(`Result: run ${ent.run_id}, case ${ent.case_id}, endTime ${ent.end_time}`);
-		});
+
 		return [entities, count];
 	}
 }
